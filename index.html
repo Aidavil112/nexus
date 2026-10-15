@@ -1,0 +1,101 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEXUS AGENT</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05070f;color:#e8ecf5;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;min-height:100vh}
+#st{position:fixed;inset:0;z-index:0}
+#wrap{position:relative;z-index:2;max-width:520px;margin:0 auto;padding:26px 16px 90px}
+h1{font-size:34px;text-align:center;letter-spacing:6px;background:linear-gradient(90deg,#7c5cff,#00e0ff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 40px rgba(90,120,255,.25)}
+#sub{text-align:center;color:#8b93a7;font-size:12.5px;margin:8px 0 34px}
+.orb{position:relative;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#fff;text-shadow:0 1px 6px #000;box-shadow:0 0 30px rgba(100,120,255,.28),inset 0 0 24px rgba(255,255,255,.06);border:1px solid rgba(160,180,255,.28);transition:transform .15s}
+.orb:active{transform:scale(.93)}
+.orb b{font-size:13px;letter-spacing:1px}.orb i{font-style:normal;font-size:22px;margin-bottom:3px}
+#o1{width:132px;height:132px;margin:6px auto 22px;background:radial-gradient(circle at 32% 28%,#3d2f7a,#141a3a 70%)}
+#o1 b{font-size:15px}
+.orow{display:flex;justify-content:space-between;padding:0 4px}
+.osm{width:88px;height:88px;background:radial-gradient(circle at 32% 28%,#1d2a52,#0d1226 72%)}
+.osm i{font-size:18px}.osm b{font-size:10.5px}
+.pv{position:fixed;inset:auto 0 0 0;z-index:9;background:#0b1020;border-top:1px solid #2a3560;border-radius:22px 22px 0 0;padding:18px 16px 30px;transform:translateY(105%);transition:transform .25s;max-height:82vh;overflow-y:auto;box-shadow:0 -12px 50px rgba(0,0,0,.6)}
+.pv.on{transform:translateY(0)}
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.ph h2{font-size:17px;color:#bcd0ff}.ph span{cursor:pointer;color:#8b93a7;font-size:22px;padding:0 6px}
+.in,textarea{width:100%;background:#0d1226;border:1px solid #2a3560;border-radius:10px;color:#e8ecf5;padding:11px 12px;font-size:14px;margin:6px 0 10px}
+textarea{min-height:74px;resize:vertical}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:700;color:#fff;background:linear-gradient(90deg,#7c5cff,#00b3e0);margin:8px 0}
+.btn.g{background:linear-gradient(90deg,#16a34a,#0d9488)}
+.brow{display:flex;gap:8px}.brow .btn{margin:8px 0}
+.idea{background:#111737;border:1px solid #26305c;border-radius:12px;padding:11px;margin:8px 0;font-size:13.5px}
+.idea b{color:#ffd166}.idea small{color:#8b93a7;display:block;margin-top:4px}
+#msg{font-size:13px;color:#7ee2a8;min-height:18px;margin-top:6px;word-break:break-word}
+.frame{width:100%;height:340px;border:0;border-radius:12px;margin-top:8px}
+.hint{font-size:11.5px;color:#5b6478;margin-top:8px;line-height:1.5}
+</style></head><body>
+<canvas id="st"></canvas>
+<div id="wrap">
+<h1>NEXUS</h1><div id="sub">AGENT · AI Dukaan + Reels + Trading<br> sab ek jagah</div>
+<div class="orb" id="o1" onclick="go('shopify')"><i>🛒</i><b>NEXUS CORE</b></div>
+<div class="orow">
+<div class="orb osm" onclick="go('trade')"><i>📈</i><b>TRADE</b></div>
+<div class="orb osm" onclick="go('insta')"><i>📲</i><b>INSTA</b></div>
+<div class="orb osm" onclick="go('shop')"><i>🌐</i><b>DUKAAN</b></div>
+<div class="orb osm" onclick="go('gmail')"><i>📧</i><b>GMAIL</b></div>
+</div>
+<p class="hint" style="text-align:center">Kisi bhi globe ko dabao · NEXUS v1 LIVE</p>
+</div>
+
+<div class="pv" id="p-shopify"><div class="ph"><h2>🛒 NEXUS CORE (Shopify Agent)</h2><span onclick="go(0)">✕</span></div>
+<input class="in" id="rurl" placeholder="Render URL">
+<button class="btn g" onclick="save()">💾 SAVE</button>
+<input class="in" id="niche" placeholder="Niche likho (jaise: mobile accessories)">
+<button class="btn" onclick="research()">🔍 RESEARCH — 5 products dhundo</button>
+<div id="ideas"></div><div id="msg"></div>
+<p class="hint">RESEARCH server par Gemini se 5 product ideas laata hai. APPROVE ke baad add: ghadi me aa raha (v2).</p></div>
+
+<div class="pv" id="p-insta"><div class="ph"><h2>📲 INSTA AUTO-POST</h2><span onclick="go(0)">✕</span></div>
+<textarea id="cap" placeholder="Caption likho (Hindi me best!)..."></textarea>
+<input class="in" id="img" placeholder="Image/video ka public URL (optional)">
+<button class="btn" onclick="insta()">🚀 INSTAGRAM PAR POST KARO</button>
+<div id="imsg"></div>
+<p class="hint">@nexusaistore par seedha post. Video URL do to REEL banegi!</p></div>
+
+<div class="pv" id="p-trade"><div class="ph"><h2>📈 TRADE</h2><span onclick="go(0)">✕</span></div>
+<div class="brow">
+<button class="btn" onclick="tv('NSE:RELIANCE')">RELIANCE</button>
+<button class="btn" onclick="tv('BINANCE:DOGEUSDT')">DOGE</button>
+</div>
+<div class="brow">
+<button class="btn" onclick="tv('BINANCE:XRPUSDT')">XRP</button>
+<button class="btn" onclick="tv('BINANCE:SOLUSDT')">SOL</button>
+</div>
+<div id="tvd"></div></div>
+
+<div class="pv" id="p-shop"><div class="ph"><h2>🌐 DUKAAN</h2><span onclick="go(0)">✕</span></div>
+<button class="btn" onclick="window.open('https://nexus-test-gwutimdb.myshopify.com','_blank')">🏬 NEXUS TEST STORE KHOLE</button>
+<p class="hint">9 products ready hain! (Password hatne ke baad duniya ke liye khulega)</p>
+<button class="btn g" onclick="window.open('https://bibekpradh112.github.io/nexus/','_blank')">⭐ YE SITE (link share karo)</button></div>
+
+<div class="pv" id="p-gmail"><div class="ph"><h2>📧 GMAIL RELAY</h2><span onclick="go(0)">✕</span></div>
+<p style="font-size:13.5px;color:#c8d0e4;line-height:1.6">Gmail relay v1 LIVE hai — doPost <b>{token:'nexus'}</b> se send/read. Phone se test report pending. Deck v2 me inbox UI aa raha hai.</p></div>
+
+<script>
+var c=document.getElementById('st'),x=c.getContext('2d'),S=[];
+function rs(){c.width=innerWidth;c.height=innerHeight;S=[];for(var i=0;i<130;i++)S.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.3,p:Math.random()*6.28,s:Math.random()*.02+.005})}
+rs();addEventListener('resize',rs);
+(function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<S.length;i++){var a=S[i];a.p+=a.s;var o=.35+Math.abs(Math.sin(a.p))*.65;x.fillStyle='rgba(200,215,255,'+o+')';x.beginPath();x.arc(a.x,a.y,a.r,0,6.28);x.fill()}requestAnimationFrame(loop)})();
+function go(id){document.querySelectorAll('.pv').forEach(function(p){p.classList.remove('on')});if(id){document.getElementById('p-'+id).classList.add('on')}}
+function API(){return localStorage.getItem('nexus_render')||'https://nexus-agent-ycck.onrender.com'}
+document.getElementById('rurl').value=API();
+function msg(t,ok){document.getElementById('msg').style.color=ok?'#7ee2a8':'#ff8f8f';document.getElementById('msg').textContent=t}
+function save(){var v=document.getElementById('rurl').value.trim().replace(/\/+$/,'');localStorage.setItem('nexus_render',v);msg('Save ho gaya: '+v,1)}
+function research(){var n=document.getElementById('niche').value.trim();if(!n){msg('Pehle niche likho!',0);return}
+msg('Gemini soch raha hai... ⏳',1);document.getElementById('ideas').innerHTML='';
+fetch(API()+'/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({niche:n})}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(d){
+if(!d.ok){msg('ERROR: '+(d.j.detail||JSON.stringify(d.j)).slice(0,120),0);return}
+var h='';d.j.ideas.forEach(function(p,i){h+='<div class="idea"><b>'+(i+1)+'. '+p.title+' — ₹'+p.price+'</b>'+(p.why?'<small>'+p.why+'</small>':'')+'</div>'});
+document.getElementById('ideas').innerHTML=h;msg('Ho gaya! '+d.j.ideas.length+' products mile 🎉',1)}).catch(function(e){msg('Server tak nahi pahuncha: '+e,0)})}
+function insta(){var t=document.getElementById('cap').value.trim();if(!t){document.getElementById('imsg').textContent='Caption likho!';return}
+var b={content:t,platform:'instagram'};var m=document.getElementById('img').value.trim();if(m)b.imageUrl=m;
+document.getElementById('imsg').textContent='Post ho raha hai... ⏳';
+fetch(API()+'/post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(d){
+document.getElementById('imsg').textContent=d.ok?'POST HO GAYA! 🎉 Instagram kholo!':'FAIL: '+(d.j.detail||'').slice(0,120)}).catch(function(e){document.getElementById('imsg').textContent='Server offline: '+e})}
+function tv(sym){document.getElementById('tvd').innerHTML='<iframe class="frame" src="https://s.tradingview.com/widgetembed/?symbol='+encodeURIComponent(sym)+'&interval=15&theme=dark&withdateranges=1&allow_symbol_change=1&hide_side_toolbar=1"></iframe>'}
+</script>
+</body></html>
