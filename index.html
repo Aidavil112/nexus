@@ -1,101 +1,174 @@
-<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEXUS AGENT</title><style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#05070f;color:#e8ecf5;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;min-height:100vh}
-#st{position:fixed;inset:0;z-index:0}
-#wrap{position:relative;z-index:2;max-width:520px;margin:0 auto;padding:26px 16px 90px}
-h1{font-size:34px;text-align:center;letter-spacing:6px;background:linear-gradient(90deg,#7c5cff,#00e0ff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 40px rgba(90,120,255,.25)}
-#sub{text-align:center;color:#8b93a7;font-size:12.5px;margin:8px 0 34px}
-.orb{position:relative;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#fff;text-shadow:0 1px 6px #000;box-shadow:0 0 30px rgba(100,120,255,.28),inset 0 0 24px rgba(255,255,255,.06);border:1px solid rgba(160,180,255,.28);transition:transform .15s}
-.orb:active{transform:scale(.93)}
-.orb b{font-size:13px;letter-spacing:1px}.orb i{font-style:normal;font-size:22px;margin-bottom:3px}
-#o1{width:132px;height:132px;margin:6px auto 22px;background:radial-gradient(circle at 32% 28%,#3d2f7a,#141a3a 70%)}
-#o1 b{font-size:15px}
-.orow{display:flex;justify-content:space-between;padding:0 4px}
-.osm{width:88px;height:88px;background:radial-gradient(circle at 32% 28%,#1d2a52,#0d1226 72%)}
-.osm i{font-size:18px}.osm b{font-size:10.5px}
-.pv{position:fixed;inset:auto 0 0 0;z-index:9;background:#0b1020;border-top:1px solid #2a3560;border-radius:22px 22px 0 0;padding:18px 16px 30px;transform:translateY(105%);transition:transform .25s;max-height:82vh;overflow-y:auto;box-shadow:0 -12px 50px rgba(0,0,0,.6)}
-.pv.on{transform:translateY(0)}
-.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.ph h2{font-size:17px;color:#bcd0ff}.ph span{cursor:pointer;color:#8b93a7;font-size:22px;padding:0 6px}
-.in,textarea{width:100%;background:#0d1226;border:1px solid #2a3560;border-radius:10px;color:#e8ecf5;padding:11px 12px;font-size:14px;margin:6px 0 10px}
-textarea{min-height:74px;resize:vertical}
-.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:700;color:#fff;background:linear-gradient(90deg,#7c5cff,#00b3e0);margin:8px 0}
-.btn.g{background:linear-gradient(90deg,#16a34a,#0d9488)}
-.brow{display:flex;gap:8px}.brow .btn{margin:8px 0}
-.idea{background:#111737;border:1px solid #26305c;border-radius:12px;padding:11px;margin:8px 0;font-size:13.5px}
-.idea b{color:#ffd166}.idea small{color:#8b93a7;display:block;margin-top:4px}
-#msg{font-size:13px;color:#7ee2a8;min-height:18px;margin-top:6px;word-break:break-word}
-.frame{width:100%;height:340px;border:0;border-radius:12px;margin-top:8px}
-.hint{font-size:11.5px;color:#5b6478;margin-top:8px;line-height:1.5}
-</style></head><body>
-<canvas id="st"></canvas>
-<div id="wrap">
-<h1>NEXUS</h1><div id="sub">AGENT · AI Dukaan + Reels + Trading<br> sab ek jagah</div>
-<div class="orb" id="o1" onclick="go('shopify')"><i>🛒</i><b>NEXUS CORE</b></div>
-<div class="orow">
-<div class="orb osm" onclick="go('trade')"><i>📈</i><b>TRADE</b></div>
-<div class="orb osm" onclick="go('insta')"><i>📲</i><b>INSTA</b></div>
-<div class="orb osm" onclick="go('shop')"><i>🌐</i><b>DUKAAN</b></div>
-<div class="orb osm" onclick="go('gmail')"><i>📧</i><b>GMAIL</b></div>
+📦 CHUNK 1 — COPY ME (naye COPY se shuru — line 1 se lekar 'SITE KHOLDO' tak)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NEXUS — Personal AI Command Deck</title>
+<meta name="description" content="Free personal AI command deck: 21 autonomous agents, 6-bot paper trading desk with live crypto prices, voice control and a Gemini-powered brain. Runs on any phone or laptop.">
+<meta property="og:title" content="NEXUS — Personal AI Command Deck">
+<meta property="og:description" content="Free personal AI command deck: 19 autonomous agents, 6-bot paper trading desk, live crypto prices, and a Gemini-powered brain. Free, single-file, works on phones.">
+<style>
+:root{--bg:#04060e;--bg2:#080d1c;--card:rgba(10,18,38,.72);--line:rgba(80,130,255,.16);--line2:rgba(80,130,255,.34);--text:#dbe6ff;--dim:#8ea3d0;--acc:#4f8cff;--acc2:#22d3ee;--ok:#34d399;--bad:#f87171;--warn:#fbbf24}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;background:
+radial-gradient(1200px 800px at 20% -10%,rgba(37,99,235,.18),transparent 60%),
+radial-gradient(1000px 700px at 90% 10%,rgba(34,211,238,.10),transparent 55%),
+radial-gradient(900px 900px at 50% 110%,rgba(124,58,237,.14),transparent 60%);pointer-events:none;z-index:0}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:14px 12px 90px}
+header{display:flex;align-items:center;gap:10px;padding:8px 4px 12px}
+.logo{width:38px;height:38px;border-radius:12px;background:conic-gradient(from 210deg,#4f8cff,#22d3ee,#7c3aed,#4f8cff);display:flex;align-items:center;justify-content:center;font-weight:900;color:#04060e;box-shadow:0 0 24px rgba(79,140,255,.5)}
+h1{font-size:18px;letter-spacing:.5px}
+.sub{font-size:10.5px;color:var(--dim)}
+.pill{margin-left:auto;font-size:10px;color:var(--dim);border:1px solid var(--line);padding:4px 9px;border-radius:999px;background:rgba(8,14,30,.6);white-space:nowrap}
+.pill b{color:var(--ok)}
+.tabbar{display:flex;gap:6px;overflow-x:auto;padding:8px 2px;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tb{flex:0 0 auto;font-size:10.5px;color:var(--dim);background:rgba(10,18,38,.7);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer}
+.tb.on{color:#fff;border-color:var(--line2);background:linear-gradient(180deg,rgba(79,140,255,.25),rgba(79,140,255,.08));box-shadow:0 0 14px rgba(79,140,255,.25) inset}
+.view{display:none}.view.on{display:block}
+.vwrap{padding:6px 2px}
+.vtitle{font-size:12px;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;margin:6px 2px 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;position:relative;overflow:hidden}
+.card h3{font-size:13px;margin-bottom:4px}
+.card p{font-size:10.5px;color:var(--dim);line-height:1.45}
+.card .go{margin-top:9px;font-size:10.5px;color:#eaf1ff;background:linear-gradient(180deg,rgba(79,140,255,.35),rgba(79,140,255,.12));border:1px solid var(--line2);border-radius:9px;padding:7px 10px;display:inline-block;cursor:pointer}
+.card .tag{position:absolute;top:10px;right:10px;font-size:9px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:2px 7px}
+.big{grid-column:span 2}
+.kpi{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
+.kpi div{flex:1;min-width:105px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.kpi b{display:block;font-size:15px;margin-top:2px}
+.kpi span{font-size:9.5px;color:var(--dim);letter-spacing:.8px;text-transform:uppercase}
+.log{margin-top:10px;background:rgba(3,6,14,.8);border:1px solid var(--line);border-radius:12px;padding:10px;font:10.5px/1.55 ui-monospace,Menlo,monospace;color:#9fd6ff;max-height:180px;overflow:auto;white-space:pre-wrap}
+.btn{font:inherit;font-size:11px;color:#eaf1ff;background:linear-gradient(180deg,rgba(79,140,255,.35),rgba(79,140,255,.10));border:1px solid var(--line2);border-radius:10px;padding:9px 13px;cursor:pointer}
+.btn.ghost{background:rgba(10,18,38,.6)}
+.btn.ok{border-color:rgba(52,211,153,.5);color:#c8ffe9}
+.btn.bad{border-color:rgba(248,113,113,.5);color:#ffd9d9}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+input,textarea,select{background:rgba(6,10,24,.85);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px;font:inherit;font-size:12px;outline:none;width:100%}
+input:focus,textarea:focus{border-color:var(--line2)}
+label{font-size:10px;color:var(--dim);letter-spacing:.8px;text-transform:uppercase}
+.mini{font-size:10px;color:var(--dim)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.agent{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed rgba(80,130,255,.14)}
+.agent:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--dim);margin-top:5px;flex:0 0 auto}
+.dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.warn{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.dot.bad{background:var(--bad)}
+.agent b{font-size:12px}
+.agent p{font-size:10px;color:var(--dim);line-height:1.4}
+.agent .rt{margin-left:auto;font-size:9.5px;color:var(--dim);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+td{padding:8px 6px;border-bottom:1px solid rgba(80,130,255,.09)}
+.pos{color:var(--ok)}.neg{color:var(--bad)}
+.tv{width:100%;height:420px;border:0;border-radius:14px;background:#05070f}
+footer{margin-top:26px;text-align:center;font-size:9.5px;color:#5a6b95}
+.conf{display:grid;grid-template-columns:1fr;gap:9px;max-width:520px}
+.bar{height:7px;background:rgba(80,130,255,.12);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:99px}
+.voice-orb{width:120px;height:120px;border-radius:50%;margin:10px auto;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;
+background:radial-gradient(closest-side,rgba(79,140,255,.35),rgba(10,18,38,.2) 70%,transparent);border:1px solid var(--line2);font-size:30px}
+.voice-orb.listening{animation:pulse 1.1s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,140,255,.45)}70%{box-shadow:0 0 0 26px rgba(79,140,255,0)}100%{box-shadow:0 0 0 0 rgba(79,140,255,0)}}
+.hint{font-size:9.5px;color:var(--dim);line-height:1.5}
+.chip{display:inline-block;font-size:9.5px;color:#bfd2ff;background:rgba(79,140,255,.12);border:1px solid var(--line);border-radius:999px;padding:3px 8px;margin:2px;cursor:pointer}
+.overlay{position:fixed;inset:0;background:rgba(2,4,10,.72);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
+.overlay.on{display:flex}
+.modal{width:100%;max-width:430px;max-height:86vh;overflow:auto;background:var(--bg2);border:1px solid var(--line2);border-radius:18px;padding:16px}
+.modal h2{font-size:14px;margin-bottom:10px}
+.x{float:right;cursor:pointer;color:var(--dim);font-size:16px;padding:2px 6px}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+<header>
+<div class="logo">N</div>
+<div><h1>NEXUS</h1><div class="sub">personal AI command deck — sab ek jagah</div></div>
+<div class="pill">agents <b id="agOn">0</b>/21 on · <span id="clock">--:--</span></div>
+</header>
+<nav class="tabbar" id="tabs">
+<button class="tb on" data-v="home">🏠 HOME</button>
+<button class="tb" data-v="trade">📈 TRADE</button>
+<button class="tb" data-v="gmail">📧 GMAIL</button>
+<button class="tb" data-v="shopify">🛒 SHOPIFY</button>
+<button class="tb" data-v="forge">🔥 FORGE</button>
+<button class="tb" data-v="binance">⚡ BINANCE</button>
+<button class="tb" data-v="editor">✍️ EDITOR</button>
+<button class="tb" data-v="brain">🧠 BRAIN</button>
+</nav>
+<section class="view on" id="v-home"><div class="vwrap">
+<div class="kpi">
+<div><span>Portfolio (paper)</span><b id="kPf">₹1,00,000</b></div>
+<div><span>Agents ON</span><b id="kAg">0/21</b></div>
+<div><span>Crypto feed</span><b id="kCr">…</b></div>
+<div><span>Brain</span><b id="kBr">local</b></div>
 </div>
-<p class="hint" style="text-align:center">Kisi bhi globe ko dabao · NEXUS v1 LIVE</p>
+<div class="grid">
+<div class="card big"><span class="tag">core</span><h3>🛒 NEXUS CORE — Shopify Agent</h3><p>Dukaan ka dimaag: research, approve, list — NEXUS CORE panel me. Render server + Gemini free key chalate hain.</p><span class="go" onclick="go('shopify')">Panel kholo →</span></div>
+<div class="card"><span class="tag">voice</span><h3>🎙️ Voice Desk</h3><p>Hindi/English bolke command do — desk, status, trade, weather.</p><span class="go" onclick="go('home');Vox.toggle()">Mic dabao →</span></div>
+<div class="card"><span class="tag">money</span><h3>📈 Paper Trading Desk</h3><p>6 bots, NSE sim + live crypto, ₹1L nakli cash — seekhne ke liye.</p><span class="go" onclick="go('trade')">Desk kholo →</span></div>
+<div class="card"><span class="tag">mail</span><h3>📧 Gmail Relay</h3><p>Apps Script relay se mail padho/bhejo — sirf apne access se.</p><span class="go" onclick="go('gmail')">Setup →</span></div>
+<div class="card"><span class="tag">shop</span><h3>🌐 Dukaan (live site)</h3><p>Nexus Test store — customer wala link.</p><span class="go" onclick="openStore()">Store kholdo →</span></div>
+<div class="card"><span class="tag">auto</span><h3>⚙️ Autopilot</h3><p>Agents ka heartbeat: on/off, interval, safe-mode.</p><span class="go" onclick="go('home');AP.toggle()">Toggle →</span></div>
 </div>
-
-<div class="pv" id="p-shopify"><div class="ph"><h2>🛒 NEXUS CORE (Shopify Agent)</h2><span onclick="go(0)">✕</span></div>
-<input class="in" id="rurl" placeholder="Render URL">
-<button class="btn g" onclick="save()">💾 SAVE</button>
-<input class="in" id="niche" placeholder="Niche likho (jaise: mobile accessories)">
-<button class="btn" onclick="research()">🔍 RESEARCH — 5 products dhundo</button>
-<div id="ideas"></div><div id="msg"></div>
-<p class="hint">RESEARCH server par Gemini se 5 product ideas laata hai. APPROVE ke baad add: ghadi me aa raha (v2).</p></div>
-
-<div class="pv" id="p-insta"><div class="ph"><h2>📲 INSTA AUTO-POST</h2><span onclick="go(0)">✕</span></div>
-<textarea id="cap" placeholder="Caption likho (Hindi me best!)..."></textarea>
-<input class="in" id="img" placeholder="Image/video ka public URL (optional)">
-<button class="btn" onclick="insta()">🚀 INSTAGRAM PAR POST KARO</button>
-<div id="imsg"></div>
-<p class="hint">@nexusaistore par seedha post. Video URL do to REEL banegi!</p></div>
-
-<div class="pv" id="p-trade"><div class="ph"><h2>📈 TRADE</h2><span onclick="go(0)">✕</span></div>
-<div class="brow">
-<button class="btn" onclick="tv('NSE:RELIANCE')">RELIANCE</button>
-<button class="btn" onclick="tv('BINANCE:DOGEUSDT')">DOGE</button>
+<div class="row">
+<button class="btn" onclick="AP.toggle()">▶️ AUTO: <b id="apSt">OFF</b></button>
+<button class="btn ghost" onclick="statusPing()">🩺 STATUS</button>
+<button class="btn ghost" onclick="briefToday()">🗒️ BRIEF</button>
+<button class="btn ghost" onclick="saveDeck()">💾 SAVE</button>
 </div>
-<div class="brow">
-<button class="btn" onclick="tv('BINANCE:XRPUSDT')">XRP</button>
-<button class="btn" onclick="tv('BINANCE:SOLUSDT')">SOL</button>
+<div id="homeLog" class="log">NEXUS deck ready. AUTO off. Brain: local fallback (BRAIN tab me Gemini key daalo).
+Tip: pehle 🧠 BRAIN me key, phir 🩺 STATUS.
 </div>
-<div id="tvd"></div></div>
-
-<div class="pv" id="p-shop"><div class="ph"><h2>🌐 DUKAAN</h2><span onclick="go(0)">✕</span></div>
-<button class="btn" onclick="window.open('https://nexus-test-gwutimdb.myshopify.com','_blank')">🏬 NEXUS TEST STORE KHOLE</button>
-<p class="hint">9 products ready hain! (Password hatne ke baad duniya ke liye khulega)</p>
-<button class="btn g" onclick="window.open('https://bibekpradh112.github.io/nexus/','_blank')">⭐ YE SITE (link share karo)</button></div>
-
-<div class="pv" id="p-gmail"><div class="ph"><h2>📧 GMAIL RELAY</h2><span onclick="go(0)">✕</span></div>
-<p style="font-size:13.5px;color:#c8d0e4;line-height:1.6">Gmail relay v1 LIVE hai — doPost <b>{token:'nexus'}</b> se send/read. Phone se test report pending. Deck v2 me inbox UI aa raha hai.</p></div>
-
-<script>
-var c=document.getElementById('st'),x=c.getContext('2d'),S=[];
-function rs(){c.width=innerWidth;c.height=innerHeight;S=[];for(var i=0;i<130;i++)S.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+.3,p:Math.random()*6.28,s:Math.random()*.02+.005})}
-rs();addEventListener('resize',rs);
-(function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<S.length;i++){var a=S[i];a.p+=a.s;var o=.35+Math.abs(Math.sin(a.p))*.65;x.fillStyle='rgba(200,215,255,'+o+')';x.beginPath();x.arc(a.x,a.y,a.r,0,6.28);x.fill()}requestAnimationFrame(loop)})();
-function go(id){document.querySelectorAll('.pv').forEach(function(p){p.classList.remove('on')});if(id){document.getElementById('p-'+id).classList.add('on')}}
-function API(){return localStorage.getItem('nexus_render')||'https://nexus-agent-ycck.onrender.com'}
-document.getElementById('rurl').value=API();
-function msg(t,ok){document.getElementById('msg').style.color=ok?'#7ee2a8':'#ff8f8f';document.getElementById('msg').textContent=t}
-function save(){var v=document.getElementById('rurl').value.trim().replace(/\/+$/,'');localStorage.setItem('nexus_render',v);msg('Save ho gaya: '+v,1)}
-function research(){var n=document.getElementById('niche').value.trim();if(!n){msg('Pehle niche likho!',0);return}
-msg('Gemini soch raha hai... ⏳',1);document.getElementById('ideas').innerHTML='';
-fetch(API()+'/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({niche:n})}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(d){
-if(!d.ok){msg('ERROR: '+(d.j.detail||JSON.stringify(d.j)).slice(0,120),0);return}
-var h='';d.j.ideas.forEach(function(p,i){h+='<div class="idea"><b>'+(i+1)+'. '+p.title+' — ₹'+p.price+'</b>'+(p.why?'<small>'+p.why+'</small>':'')+'</div>'});
-document.getElementById('ideas').innerHTML=h;msg('Ho gaya! '+d.j.ideas.length+' products mile 🎉',1)}).catch(function(e){msg('Server tak nahi pahuncha: '+e,0)})}
-function insta(){var t=document.getElementById('cap').value.trim();if(!t){document.getElementById('imsg').textContent='Caption likho!';return}
-var b={content:t,platform:'instagram'};var m=document.getElementById('img').value.trim();if(m)b.imageUrl=m;
-document.getElementById('imsg').textContent='Post ho raha hai... ⏳';
-fetch(API()+'/post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(d){
-document.getElementById('imsg').textContent=d.ok?'POST HO GAYA! 🎉 Instagram kholo!':'FAIL: '+(d.j.detail||'').slice(0,120)}).catch(function(e){document.getElementById('imsg').textContent='Server offline: '+e})}
-function tv(sym){document.getElementById('tvd').innerHTML='<iframe class="frame" src="https://s.tradingview.com/widgetembed/?symbol='+encodeURIComponent(sym)+'&interval=15&theme=dark&withdateranges=1&allow_symbol_change=1&hide_side_toolbar=1"></iframe>'}
-</script>
-</body></html>
+<div style="margin-top:14px" class="card"><h3>🎤 Bolke kaho</h3><div class="voice-orb" id="orb" onclick="Vox.toggle()">🎤</div>
+<div style="text-align:center" class="hint">Dabao → bolo → chhodo. "desk kholo" · "status batao" · "weather" · "trade kholo"</div>
+<div id="voxOut" style="text-align:center;margin-top:6px" class="mini">—</div></div>
+</div></section>
+<section class="view" id="v-trade"><div class="vwrap"><div class="vtitle">📈 PAPER TRADING DESK — ₹1,00,000 nakli cash</div>
+<div class="kpi">
+<div><span>Cash</span><b id="tCash">₹1,00,000</b></div>
+<div><span>Holdings</span><b id="tHold">₹0</b></div>
+<div><span>P/L</span><b id="tPl">₹0</b></div>
+<div><span>Bots</span><b>6 armed</b></div>
+</div>
+<div class="card"><h3>Live crypto (Binance public)</h3><div id="cryRow" class="mini">loading…</div>
+<div class="row"><button class="btn ghost" onclick="Cry.refresh()">🔄 Refresh rates</button><span class="mini">sim rates: NSE table se</span></div></div>
+<div class="card" style="margin-top:10px"><h3>NSE sim watchlist</h3>
+<table id="nseT"><thead><tr><th>sym</th><th>last</th><th>chg</th><th>buy</th><th>sell</th></tr></thead><tbody></tbody></table></div>
+<div class="card" style="margin-top:10px"><h3>Bots</h3><div id="botList"></div>
+<div class="row"><button class="btn ok" onclick="Bots.all('start')">▶️ sab START</button><button class="btn bad" onclick="Bots.all('stop')">⏹ SAB STOP</button><button class="btn ghost" onclick="Bots.report()">🧾 Bot report</button></div></div>
+</div></section>
+<section class="view" id="v-gmail"><div class="vwrap"><div class="vtitle">📧 GMAIL RELAY — apna control</div>
+<div class="conf">
+<label>Apps Script Web App URL</label><input id="gmUrl" placeholder="https://script.google.com/macros/s/…/exec">
+<label>Token (script me set kiya)</label><input id="gmTok" placeholder="nexus">
+<div class="row"><button class="btn ok" onclick="GM.save()">💾 SAVE relay</button><button class="btn ghost" onclick="GM.read()">📥 INBOX padho</button><button class="btn ghost" onclick="GM.testSend()">📤 TEST mail bhejo</button></div>
+<div id="gmOut" class="log">Relay setup: script.google.com → new project → nexus doPost paste → Deploy → web app → URL yahan.
+Token 'nexus' rakho (script ke TOKEN se match).</div>
+</div></div></section>
+<section class="view" id="v-shopify"><div class="vwrap"><div class="vtitle">🛒 NEXUS CORE — Shopify Agent panel</div>
+<div class="conf">
+<label>Render server URL</label><input id="shUrl" placeholder="https://…onrender.com">
+<div class="row">
+<button class="btn ok" onclick="SH.save()">💾 SAVE</button>
+<button class="btn ghost" onclick="SH.health()">🩺 Health</button>
+<button class="btn ghost" onclick="SH.products()">📦 Products</button>
+</div>
+<label>Niche likho (research ke liye)</label><input id="shNiche" placeholder="jaise: mobile accessories">
+<div class="row"><button class="btn" onclick="SH.research()">🔍 RESEARCH — 5 ideas</button><button class="btn ghost" onclick="SH.trending()">📺 YT trending niches</button></div>
+<div id="shOut" class="log">Server: /health, /products, /research, /post. Pehle SAVE, phir Health.</div>
+</div></div></section>
+<section class="view" id="v-forge"><div class="vwrap"><div class="vtitle">🔥 FORGE — build small tools</div>
+<div class="grid">
+<div class="card"><h3>🧰 Quick tools</h3><p>Chhote utilities: QR, chit, invoice — jaldi aayenge (v2).</p><span class="go" onclick="log('Forge: v2 roadmap me')">Notify →</span></div>
+<div class="card"><h3>🌐 Site deploy</h3><p>GitHub Pages par deck ka lite version live karo.</p><span class="go" onclick="siteUrl()">Copy site URL →</span></div>
+</div>
+<div class="row" style="margin-top:10px"><button class="btn ghost" onclick="siteUrl()">🔗 Site URL copy</button><button class="btn ghost" style="border-color:rgba(79,216,255,.55);color:#4fd8ff">🌐 SITE KHOLDO</button></div>
+</div></section>
