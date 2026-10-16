@@ -1886,3 +1886,62 @@ async function fetchCrypto() {
         const base = c.bin.replace('USDT', '');
         if (j2[c.cg] && j2[c.cg].inr && PT.pr[base] !== undefined) {
           PT.pr[base] = j2[c.cg].inr;
+          (PT.hist[base] = PT.hist[base] || []).push(j2[c.cg].inr);
+          if (PT.hist[base].length > 36) PT.hist[base].shift();
+        }
+      });
+      if (!cryOn) { cryOn = true; log('⛓ LIVE crypto prices ON — CoinGecko feed'); }
+    } catch (e2) { /* silent retry next round */ }
+  }
+}
+fetchCrypto();
+setInterval(fetchCrypto, 12000);
+document.getElementById('ptBody').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const s = b.dataset.b || b.dataset.sl, n = PT.qty;
+  if (b.dataset.b) {
+    const cost = PT.pr[s] * n, pos = PT.hold[s] || { q: 0, avg: 0 };
+    PT.cash -= cost;
+    pos.avg = (pos.avg * pos.q + cost) / (pos.q + n); pos.q += n;
+    PT.hold[s] = pos;
+    Voice.speak('Bought ' + n + ' share of ' + s + '.');
+    log('💰 paper BUY — ' + s + ' ×' + n + ' @ ₹' + PT.pr[s].toFixed(0));
+  } else {
+    const pos = PT.hold[s], nn = Math.min(n, pos.q);
+    PT.cash += PT.pr[s] * nn; pos.q -= nn;
+    if (!pos.q) delete PT.hold[s];
+    Voice.speak('Sold ' + nn + ' share of ' + s + '.');
+    log('💰 paper SELL — ' + s + ' ×' + nn + ' @ ₹' + PT.pr[s].toFixed(0));
+  }
+  ptSave(); ptRender();
+});
+document.getElementById('ptQty').addEventListener('click', function () {
+  PT.qty = PT.qty === 1 ? 5 : (PT.qty === 5 ? 10 : 1);
+  this.textContent = 'QTY ×' + PT.qty; ptRender();
+});
+document.querySelectorAll('.capb').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.capb').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  PT.capSel = +b.dataset.cap;
+}));
+document.getElementById('ptAdd').addEventListener('click', () => {
+  PT.cash += PT.capSel; ptSave(); ptRender(); toast('+ ₹' + PT.capSel.toLocaleString('en-IN') + ' CASH ADDED');
+  log('💰 paper top-up +₹' + PT.capSel.toLocaleString('en-IN'));
+});
+document.getElementById('ptReset').addEventListener('click', () => {
+  PT.cap = PT.capSel; PT.cash = PT.cap; PT.hold = {};
+  STOCKS.forEach(x => { PT.pr[x.s] = x.p; PT.hist[x.s] = [x.p]; });
+  ptSave(); ptRender(); toast('RESET · ₹' + PT.cap.toLocaleString('en-IN') + ' FRESH START');
+});
+ptRender();
+
+/* ---------- weather (open-meteo, free, no key) ---------- */
+async function fetchWeatherStr() {
+  try {
+    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 4500);
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=12.97&longitude=77.59&current_weather=true', { signal: ctl.signal });
+    clearTimeout(to);
+    if (!r.ok) return '';
+    const j = await r.json();
+    const c = j.current_weather; if (!c) return '';
+    const codes = { 0: 'saaf aasman', 1: 'thode baadal', 2: 'baadal', 3: 'ghane baadal', 45: 'kohra', 48: 'kohra', 51: 'phuhaar', 53: 'phuhaar', 55: 'phuhaar', 61: 'halki baarish', 63: 'baarish', 65: 'tez baarish', 80: 'baarish ke 
