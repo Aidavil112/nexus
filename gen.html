@@ -52,6 +52,7 @@ video{width:100%;max-height:60vh;border-radius:12px;margin-top:12px;background:#
 </div>
 
 <button class="btn gold" id="go">🎬 VIDEO BANAO — AGENT CHAL PADE!</button>
+<button class="btn ghost" id="auto">🎲 AUTO MODE — TOPIC BHI AGENT KHUD CHUNEGA!</button>
 <div class="bar"><div id="bar"></div></div>
 <div class="stat" id="stat">Status: ready. Prompt likho aur banne do!</div>
 
@@ -63,20 +64,7 @@ const srvEl=$('srv');
 srvEl.value=localStorage.getItem('nexus_srv')||'https://nexus-agent-ycck.onrender.com';
 srvEl.addEventListener('change',()=>localStorage.setItem('nexus_srv',srvEl.value.trim().replace(/\/$/,'')));
 function srv(){return srvEl.value.trim().replace(/\/$/,'')}
-$('go').addEventListener('click',async()=>{
-  const p=$('prompt').value.trim();
-  if(!p){stat.className='stat bad';stat.textContent='❌ PEHLE PROMPT LIKHO!';return}
-  const texts=[$('t1').value.trim(),$('t2').value.trim(),$('t3').value.trim()].filter(x=>x);
-  stat.className='stat'; stat.textContent='⏳ Agent kaam shuru kar raha hai… (2-4 min lagenge, tab kholo rehne do)';
-  bar.style.width='8%';
-  let id='';
-  try{
-    const r=await fetch(srv()+'/video',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt:p,scenes:+$('scenes').value,voice:$('voice').value,texts})});
-    const j=await r.json();
-    if(!j.ok) throw new Error(j.detail||('HTTP '+r.status));
-    id=j.id;
-  }catch(e){stat.className='stat bad';stat.textContent='❌ START fail: '+e.message+'\n(Server soya hoga — 1 min baad dobara dabao)';bar.style.width='0%';return}
+async function pollAndShow(id,p){
   while(true){
     await new Promise(r=>setTimeout(r,4000));
     let v;
@@ -86,14 +74,14 @@ $('go').addEventListener('click',async()=>{
     if(stg.startsWith('image')){const m=stg.match(/(\d+)\/(\d+)/);if(m)bar.style.width=(10+60*m[1]/m[2])+'%'}
     else if(stg==='voice')bar.style.width='75%';
     else if(stg==='render')bar.style.width='88%';
-    stat.textContent='⏳ Agent: '+stg+'…';
+    stat.textContent='⏳ Agent: '+stg+'…'+(v.topic?('\n🤖 Topic: '+v.topic):'');
     if(v.status==='done'){
       bar.style.width='100%';
-      stat.className='stat ok';stat.textContent='🎉 VIDEO READY!\n'+v.url;
+      stat.className='stat ok';stat.textContent='🎉 VIDEO READY!'+(v.topic?('\n🤖 Topic: '+v.topic):'');
       const url=srv()+v.url;
       $('result').innerHTML='<div class="card"><video controls src="'+url+'"></video>'+
         '<label style="margin-top:12px">CAPTION (Instagram ke liye)</label>'+
-        '<textarea id="cap">'+p.slice(0,120)+'\\n#ai #nexus #reels #automation</textarea>'+
+        '<textarea id="cap">'+((v.topic||p||'AI reel by NEXUS agent').slice(0,120))+'\n#ai #nexus #reels #automation</textarea>'+
         '<button class="btn gold" id="post">📲 POST KARO — @nexusaistore</button>'+
         '<div class="stat" id="pstat">Status: post ka intezaar…</div></div>';
       $('post').addEventListener('click',async()=>{
@@ -109,6 +97,36 @@ $('go').addEventListener('click',async()=>{
       return;
     }
   }
+}
+$('go').addEventListener('click',async()=>{
+  const p=$('prompt').value.trim();
+  if(!p){stat.className='stat bad';stat.textContent='❌ PEHLE PROMPT LIKHO!';return}
+  const texts=[$('t1').value.trim(),$('t2').value.trim(),$('t3').value.trim()].filter(x=>x);
+  stat.className='stat'; stat.textContent='⏳ Agent kaam shuru kar raha hai… (2-4 min lagenge, tab kholo rehne do)';
+  bar.style.width='8%';
+  let id='';
+  try{
+    const r=await fetch(srv()+'/video',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:p,scenes:+$('scenes').value,voice:$('voice').value,texts})});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.detail||('HTTP '+r.status));
+    id=j.id;
+  }catch(e){stat.className='stat bad';stat.textContent='❌ START fail: '+e.message+'\n(Server soya hoga — 1 min baad dobara dabao)';bar.style.width='0%';return}
+  pollAndShow(id,p);
+});
+$('auto').addEventListener('click',async()=>{
+  stat.className='stat'; stat.textContent='🤖 Agent pehle TOPIC research kar raha hai… (Gemini soch raha hai!)';
+  bar.style.width='5%';
+  let id='';
+  try{
+    const r=await fetch(srv()+'/video/auto',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic:$('prompt').value.trim(),scenes:+$('scenes').value,voice:$('voice').value})});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.detail||('HTTP '+r.status));
+    id=j.id;
+    stat.textContent='🤖 Topic pakka: '+j.topic+'\n⏳ Agent ab scenes banata hai…';
+  }catch(e){stat.className='stat bad';stat.textContent='❌ AUTO fail: '+e.message;bar.style.width='0%';return}
+  pollAndShow(id,'');
 });
 </script>
 </body>
