@@ -838,4 +838,432 @@ if (document.readyState === 'complete') initPages(); else window.addEventListene
 
 /* ---------- clock ---------- */
 const clockEl = document.getElementById('clock'), sysEl = document.getElementById('sysState'); 
-      
+ function tickClock() { clockEl.textContent = new Date().toTimeString().slice(0, 5); }
+setInterval(tickClock, 1000); tickClock();
+
+/* ---------- listening toggle ---------- */
+const badge = document.getElementById('micBadge'), micTxt = document.getElementById('micTxt');
+const btnPower = document.getElementById('btnPower'), deckcap = document.getElementById('deckcap');
+function setListening(on) {
+  S.listening = on;
+  badge.classList.toggle('off', !on);
+  btnPower.classList.toggle('off', !on);
+  micTxt.textContent = on ? 'LISTENING · TAP TO STOP' : 'STANDBY · TAP TO START';
+  deckcap.textContent = on ? 'LISTENING' : 'STANDBY';
+  if (!on) { pulses.length = 0; AGENTS.forEach(a => a.active = false); unhookMic(); stopRec(); liveMode = false; const bl = document.getElementById('btnLive'); if (bl) bl.classList.remove('on'); }
+  else hookMic();
+  log(on ? '🎙 microphone armed — listening for wake phrase' : '⏸ session paused — standing by');
+}
+badge.addEventListener('click', () => setListening(!S.listening));
+btnPower.addEventListener('click', () => setListening(!S.listening));
+
+/* ---------- self-check ---------- */
+document.getElementById('selfChk').addEventListener('click', () => {
+  if (chk) return;
+  chk = { t0: now, l1: false, l2: false };
+  log('⚙ self-check initiated by operator');
+});
+function stepCheck() {
+  const p = (now - chk.t0) / 2.6;
+  if (p > .33 && !chk.l1) { chk.l1 = true; log('→ probing agents [19/19] … ok · memory integrity … ok'); }
+  if (p > .66 && !chk.l2) { chk.l2 = true; log('→ integrations handshake … ok · voice stack … ok'); }
+  if (p >= 1) {
+    AGENTS.forEach(a => a.flash = 1);
+    toast('ALL SYSTEMS NOMINAL · 19/19 AGENTS');
+    log('✓ self-check complete — 0 failures / 24h');
+    Voice.speak('Self check complete. All systems nominal, 19 of 19 agents green.');
+    sysEl.textContent = 'ALL SYSTEMS NOMINAL'; sysEl.style.color = '';
+    chk = null;
+  }
+  return p;
+}
+
+/* ---------- agent activity ---------- */
+function activate(a) {
+  a.active = true; a.until = now + rand(3, 7); a.nextLine = now + rand(.5, 1.4);
+  spawnPulse(a, 1); spawnPulse(a, -1);
+  agentLog(a);
+}
+function agentLog(a) {
+  const m = pick(ACTIONS[a.label]);
+  a.hist.unshift(m); a.hist = a.hist.slice(0, 3);
+  log(`▸ ${a.label.toUpperCase()} · ${m}`);
+  if (S.selected === a) fillCard(a);
+}
+
+/* ---------- draw: background layer ---------- */
+function drawCurves() {
+  ctx.lineWidth = 1;
+  for (const pt of DEC) {
+    const p = pt.map(q => [q[0] * W, q[1] * H]);
+    ctx.strokeStyle = 'rgba(70,140,255,.09)';
+    ctx.beginPath(); ctx.moveTo(p[0][0], p[0][1]);
+    ctx.bezierCurveTo(p[1][0], p[1][1], p[2][0], p[2][1], p[3][0], p[3][1]); ctx.stroke();
+    for (const q of [p[0], p[3]]) {
+      ctx.fillStyle = 'rgba(120,190,255,.35)';
+      ctx.beginPath(); ctx.arc(q[0], q[1], 1.4, 0, TAU); ctx.fill();
+    }
+  }
+  // streaks
+  for (let i = streaks.length - 1; i >= 0; i--) {
+    const s = streaks[i]; s.t += s.sp * dtL;
+    if (s.t >= 1) { streaks.splice(i, 1); continue; }
+    const pt = DEC[s.ci].map(q => [q[0] * W, q[1] * H]);
+    ctx.strokeStyle = 'rgba(140,200,255,.5)'; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    let started = false;
+    for (let k = 0; k <= 6; k++) {
+      const tt = clamp(s.t - k * .012, 0, 1);
+      const [x, y] = cubic(pt, tt);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    const [hx, hy] = cubic(pt, s.t);
+    ctx.fillStyle = 'rgba(190,225,255,.9)';
+    ctx.beginPath(); ctx.arc(hx, hy, 1.6, 0, TAU); ctx.fill();
+  }
+}
+
+/* ---------- draw: orb ---------- */
+function drawOrb() {
+  const dim = S.listening ? 1 : .38;
+  const t = now;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  // wide glow
+  let g = ctx.createRadialGradient(ORB.x, ORB.y, 0, ORB.x, ORB.y, R * 3.1);
+  g.addColorStop(0, `rgba(70,120,235,${.16 * dim})`);
+  g.addColorStop(.45, `rgba(40,80,190,${.07 * dim})`);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(ORB.x - R * 3.2, ORB.y - R * 3.2, R * 6.4, R * 6.4);
+  // horizontal lens glow
+  g = ctx.createLinearGradient(ORB.x - R * 2.6, ORB.y, ORB.x + R * 2.6, ORB.y);
+  g.addColorStop(0, 'rgba(60,110,220,0)');
+  g.addColorStop(.5, `rgba(90,140,255,${.10 * dim})`);
+  g.addColorStop(1, 'rgba(60,110,220,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(ORB.x - R * 2.6, ORB.y - R * .5, R * 5.2, R);
+  // particle cloud
+  for (const p of P) {
+    const rr = p.r * R * (1 + .07 * Math.sin(t * .6 + p.ph));
+    const ang = p.a + t * p.va;
+    const x = ORB.x + Math.cos(ang) * rr, y = ORB.y + Math.sin(ang) * rr;
+    const al = clamp(.28 + .38 * Math.sin(t * 2 + p.ph), .06, .8) * dim;
+    ctx.fillStyle = p.white ? `rgba(220,238,255,${al})` : `rgba(90,160,255,${al})`;
+    ctx.fillRect(x, y, p.sz, p.sz);
+  }
+  // spokes
+  ctx.strokeStyle = `rgba(100,170,255,${.07 * dim})`; ctx.lineWidth = 1;
+  const rot0 = t * .05;
+  for (let i = 0; i < 12; i++) {
+    const a = rot0 + i * TAU / 12;
+    ctx.beginPath();
+    ctx.moveTo(ORB.x + Math.cos(a) * R * 1.34, ORB.y + Math.sin(a) * R * 1.34);
+    ctx.lineTo(ORB.x + Math.cos(a) * R * 1.62, ORB.y + Math.sin(a) * R * 1.62);
+    ctx.stroke();
+  }
+  // rotating thin arcs
+  ctx.strokeStyle = `rgba(110,190,255,${.22 * dim})`; ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const a0 = t * .12 * (i % 2 ? -1 : 1) + i * TAU / 3;
+    ctx.beginPath(); ctx.arc(ORB.x, ORB.y, R * 1.14, a0, a0 + 1.15); ctx.stroke();
+  }
+  // dashed outer ring
+  ctx.setLineDash([2, 7]);
+  ctx.strokeStyle = `rgba(90,160,255,${.14 * dim})`;
+  ctx.beginPath(); ctx.arc(ORB.x, ORB.y, R * 1.3, -t * .06, -t * .06 + TAU); ctx.stroke();
+  ctx.setLineDash([]);
+  // golden rings
+  const rp = R * (1 + .012 * Math.sin(t * 1.4));
+  ctx.shadowColor = 'rgba(255,200,70,.9)'; ctx.shadowBlur = 26 * dim;
+  ctx.strokeStyle = `rgba(255,208,80,${.92 * dim})`; ctx.lineWidth = 4.5;
+  ctx.beginPath(); ctx.arc(ORB.x, ORB.y, rp, 0, TAU); ctx.stroke();
+  ctx.shadowBlur = 10 * dim;
+  ctx.strokeStyle = `rgba(255,242,200,${.75 * dim})`; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(ORB.x, ORB.y, rp * .93, 0, TAU); ctx.stroke();
+  ctx.shadowBlur = 0;
+  // autopilot thinking ring
+  if (Brain.busy) {
+    ctx.strokeStyle = 'rgba(255,215,110,.5)'; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 10]);
+    ctx.beginPath(); ctx.arc(ORB.x, ORB.y, R * 1.5, t * .9, t * .9 + TAU); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // self-check sweep
+  if (chk) {
+    const p = (now - chk.t0) / 2.6;
+    const cr = R * (1 + 1.35 * p);
+    ctx.strokeStyle = `rgba(255,215,110,${(1 - p) * .55})`; ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(255,210,90,.8)'; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.arc(ORB.x, ORB.y, cr, 0, TAU); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+  ctx.restore();
+}
+
+/* ---------- draw: network ---------- */
+function drawNetwork() {
+  const t = now;
+  ctx.font = '500 11px "Segoe UI", system-ui, sans-serif';
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+  ctx.textBaseline = 'middle';
+  for (const a of AGENTS) {
+    const bx = a.fx * W + Math.sin(t * a.fs + a.fp) * 5;
+    const by = a.fy * H + Math.cos(t * a.fs * .8 + a.fp) * 5;
+    // never let a node sit inside the orb ring — push it outward if needed
+    const ddx = bx - ORB.x, ddy = by - ORB.y, dd = Math.hypot(ddx, ddy);
+    const minD = R * 1.22;
+    const sx = (dd < minD && dd > 0) ? ORB.x + ddx * (minD / dd) : bx;
+    const sy = (dd < minD && dd > 0) ? ORB.y + ddy * (minD / dd) : by;
+    a.sx = clamp(sx, 40, W - 40); a.sy = clamp(sy, 60, H - 60);
+    a.alpha = clamp((t - a.delay) / .45, 0, 1);
+    if (a.alpha <= 0) continue;
+    const active = a.active || S.hover === a || S.selected === a;
+    // connector
+    const dx = sx - ORB.x, dy = sy - ORB.y, d = Math.hypot(dx, dy) || 1;
+    const ex = ORB.x + dx / d * R * 1.04, ey = ORB.y + dy / d * R * 1.04;
+    const mx = (ex + sx) / 2 - dy / d * a.bow * d, my = (ey + sy) / 2 + dx / d * a.bow * d;
+    a.p0 = [ex, ey]; a.pc = [mx, my];
+    const col = active ? '255,205,90' : '90,170,255';
+    const al = (active ? .7 : .26) * a.alpha * (S.listening ? 1 : .55);
+    const g = ctx.createLinearGradient(ex, ey, sx, sy);
+    g.addColorStop(0, `rgba(${col},0)`);
+    g.addColorStop(.3, `rgba(${col},${al * .55})`);
+    g.addColorStop(1, `rgba(${col},${al})`);
+    ctx.strokeStyle = g; ctx.lineWidth = active ? 1.6 : 1;
+    ctx.beginPath(); ctx.moveTo(ex, ey); ctx.quadraticCurveTo(mx, my, sx, sy); ctx.stroke();
+    // node dot
+    const fl = a.flash;
+    const rr = (active ? 4.6 : 3.4) + fl * 2;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowColor = active ? 'rgba(255,205,90,1)' : 'rgba(110,180,255,1)';
+    ctx.shadowBlur = active ? 16 : 8;
+    ctx.fillStyle = active ? `rgba(255,215,110,${.95 * a.alpha})` : `rgba(130,190,255,${.85 * a.alpha})`;
+    ctx.beginPath(); ctx.arc(sx, sy, rr, 0, TAU); ctx.fill();
+    ctx.restore();
+    if (active || fl > 0) { // halo ring
+      const hr = rr + 5 + (active ? 2.5 * Math.sin(t * 3) : fl * 14);
+      ctx.strokeStyle = `rgba(255,210,100,${.5 * a.alpha + fl * .5})`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(sx, sy, Math.max(hr, 1), 0, TAU); ctx.stroke();
+    }
+    a.flash = Math.max(0, fl - dtL * 1.4);
+    // label
+    const left = sx < ORB.x;
+    ctx.textAlign = left ? 'right' : 'left';
+    ctx.shadowColor = 'rgba(80,150,255,.8)'; ctx.shadowBlur = 8;
+    ctx.fillStyle = active ? `rgba(255,230,170,${.98 * a.alpha})` : `rgba(205,228,255,${.85 * a.alpha})`;
+    ctx.fillText(a.label, sx + (left ? -12 : 12), sy + 1);
+    ctx.shadowBlur = 0;
+  }
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  // pulses
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = pulses.length - 1; i >= 0; i--) {
+    const p = pulses[i];
+    p.t += p.sp * dtL * (p.dir > 0 ? 1 : -1);
+    if (p.t < 0 || p.t > 1) {
+      if (p.dir > 0) p.a.flash = 1;
+      pulses.splice(i, 1); continue;
+    }
+    const [x, y] = qp(p.a, clamp(p.t, 0, 1));
+    ctx.shadowColor = 'rgba(255,215,120,1)'; ctx.shadowBlur = 12;
+    ctx.fillStyle = 'rgba(255,228,150,.95)';
+    ctx.beginPath(); ctx.arc(x, y, 2.2, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.restore();
+}
+
+/* ---------- draw: twinkles ---------- */
+function drawTwinkles() {
+  for (const s of twinkles) {
+    const al = .25 + .55 * Math.abs(Math.sin(now * s.ts + s.ph));
+    ctx.fillStyle = `rgba(200,225,255,${al})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill();
+  }
+}
+
+/* ---------- waveform ---------- */
+let amp = 0;
+const micLv = new Array(60).fill(0);
+function drawWave() {
+  const w = wave.width / DPR, h = 64;
+  wctx.clearRect(0, 0, w, h);
+  amp += ((S.listening ? 1 : .05) - amp) * Math.min(1, dtL * 3);
+  const bars = 60, bw = 4, gap = w / bars;
+  let live = false;
+  if (analyser && S.listening && micData) { analyser.getByteFrequencyData(micData); live = true; }
+  const g = wctx.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0, '#ffd75e'); g.addColorStop(.5, '#ffefd0'); g.addColorStop(1, '#ffb347');
+  wctx.fillStyle = g;
+  wctx.shadowColor = 'rgba(255,190,60,.8)'; wctx.shadowBlur = 7;
+  for (let i = 0; i < bars; i++) {
+    const v = Math.sin(now * 3.1 + i * .55) * .5 + Math.sin(now * 5.7 + i * 1.3) * .3
+            + Math.sin(now * 9.3 + i * 2.1) * .2;
+    let n;
+    if (live) {
+      const idx = 2 + ((i * (micData.length - 2)) / bars) | 0;
+      const target = (micData[idx] / 255) * 1.7;
+      micLv[i] += (target - micLv[i]) * Math.min(1, dtL * 14);
+      n = clamp(micLv[i] * .95 + Math.abs(v) * .05, .02, 1.15) * amp;
+    } else {
+      n = Math.abs(v) * (.6 + .4 * Math.random()) * amp;
+    }
+    const bh = Math.max(2, n * (h - 10));
+    const x = i * gap + (gap - bw) / 2;
+    wctx.fillRect(x, (h - bh) / 2, bw, bh);
+  }
+  wctx.shadowBlur = 0;
+}
+
+/* ---------- main loop ---------- */
+let last = performance.now(), dtL = .016;
+function frame(ts) {
+  dtL = clamp((ts - last) / 1000, 0, .05); last = ts;
+  now = (ts - S.boot) / 1000;
+  ctx.clearRect(0, 0, W, H);
+  drawCurves();
+  drawOrb();
+  drawNetwork();
+  drawTwinkles();
+  drawWave();
+  // agent activity scheduler
+  if (S.listening && now > nextAct) {
+    nextAct = now + rand(2.2, 4.8);
+    const idle = AGENTS.filter(a => !a.active && a.alpha > .9);
+    if (idle.length) activate(pick(idle));
+  }
+  for (const a of AGENTS) if (a.active) {
+    if (now > a.nextLine && S.listening) { agentLog(a); spawnPulse(a, Math.random() < .5 ? 1 : -1); a.nextLine = now + rand(1.6, 3.2); }
+    if (now > a.until) a.active = false;
+  }
+  if (S.listening && Math.random() < dtL * .5 && streaks.length < 3)
+    streaks.push({ ci: (Math.random() * DEC.length) | 0, t: 0, sp: rand(.25, .45) });
+  if (chk) stepCheck();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- interaction: hover / click ---------- */
+function nodeAt(x, y) {
+  let best = null, bd = 22;
+  for (const a of AGENTS) {
+    const d = Math.hypot(a.sx - x, a.sy - y);
+    if (d < bd) { bd = d; best = a; }
+  }
+  return best;
+}
+scene.addEventListener('mousemove', e => {
+  S.hover = nodeAt(e.clientX, e.clientY);
+  scene.style.cursor = S.hover ? 'pointer' : (Math.hypot(e.clientX - ORB.x, e.clientY - ORB.y) < R * 1.05 ? 'pointer' : 'default');
+});
+const card = document.getElementById('card');
+function fillCard(a) {
+  document.getElementById('cName').textContent = a.label;
+  document.getElementById('cRole').textContent = a.role;
+  const st = document.getElementById('cStatus');
+  st.textContent = a.active ? 'ACTIVE' : 'IDLE';
+  st.className = a.active ? 'act' : 'ok';
+  document.getElementById('cLat').textContent = (28 + ((Math.random() * 30) | 0)) + 'ms';
+  document.getElementById('cActs').innerHTML = (a.hist.length ? a.hist : ['no recent activity — idle']).map(h => '· ' + h).join('<br>');
+}
+function showCard(a) {
+  S.selected = a; fillCard(a);
+  card.classList.add('show');
+  const cw = 250;
+  card.style.left = clamp(a.sx + 20, 10, W - cw - 10) + 'px';
+  card.style.top  = clamp(a.sy - 30, 70, H - 240) + 'px';
+}
+document.getElementById('cClose').addEventListener('click', () => { card.classList.remove('show'); S.selected = null; });
+document.getElementById('cPing').addEventListener('click', () => {
+  const a = S.selected; if (!a) return;
+  spawnPulse(a, 1); spawnPulse(a, 1);
+  log(`⇄ ping → ${a.label} · ${(20 + ((Math.random() * 40) | 0))}ms`);
+});
+document.getElementById('cTask').addEventListener('click', () => {
+  const a = S.selected; if (!a) return;
+  a.active = true; a.until = now + rand(4, 7); a.nextLine = now + 1;
+  spawnPulse(a, 1);
+  toast('TASK QUEUED → ' + a.label.toUpperCase());
+  log(`⬆ task queued → ${a.label.toUpperCase()}`);
+});
+scene.addEventListener('click', e => {
+  const a = nodeAt(e.clientX, e.clientY);
+  if (a) { showCard(a); return; }
+  card.classList.remove('show'); S.selected = null;
+  if (Math.hypot(e.clientX - ORB.x, e.clientY - ORB.y) < R * 1.05) setListening(!S.listening);
+});
+
+/* ---------- voice engine (TTS + STT + live mic) ---------- */
+const Voice = {
+  speakOn: true, sttLang: 'en-IN', voices: [], q: [], activated: false,
+  init() {
+    if (!('speechSynthesis' in window)) { log('✗ speech synthesis unavailable'); return; }
+    const load = () => {
+      this.voices = speechSynthesis.getVoices() || [];
+      const sel = document.getElementById('ttsVoice');
+      if (!sel) return;
+      sel.innerHTML = this.voices.map((v, i) =>
+        `<option value="${i}">${(v.name || v.lang).slice(0, 30)}</option>`).join('');
+      const best = this.pickVoice(this.sttLang);
+      if (best >= 0) sel.value = String(best);
+    };
+    load();
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.onvoiceschanged = load;
+  },
+  pickVoice(lang) {
+    const pref = [
+      v => v.lang && v.lang.replace('_','-').startsWith(lang),
+      v => /^en/i.test(v.lang || ''),
+    ];
+    for (const f of pref) { const i = this.voices.findIndex(f); if (i >= 0) return i; }
+    return this.voices.length ? 0 : -1;
+  },
+  speak(text) {
+    if (!this.speakOn || !('speechSynthesis' in window)) { if (liveMode && !recOn) setTimeout(startRec, 300); return; }
+    if (!this.activated) { this.q.push(text); return; }   // browsers block speech before first user gesture
+    try {
+      const u = new SpeechSynthesisUtterance(String(text).replace(/[*_`#·]/g, ' '));
+      const sel = document.getElementById('ttsVoice');
+      let vi = sel && sel.value !== '' ? +sel.value : -1;
+      // Devanagari text → Hindi voice, agar available hai
+      if (/[\u0900-\u097F]/.test(text)) {
+        const hi = this.voices.findIndex(v => /^hi/i.test(v.lang || ''));
+        if (hi >= 0) vi = hi;
+      }
+      if (vi >= 0 && this.voices[vi]) { u.voice = this.voices[vi]; u.lang = this.voices[vi].lang; }
+      else u.lang = 'en-IN';
+      u.rate = 1.03; u.pitch = 1;
+      u.onstart = () => { holdForTTS = true; stopRec(); deckcap.textContent = '🔊 SPEAKING'; };
+      u.onend = u.onerror = () => {
+        holdForTTS = false;
+        if (S.listening) deckcap.textContent = liveMode ? '🔴 LIVE VOICE' : 'LISTENING';
+        if (liveMode && !recOn) restartTm = setTimeout(startRec, 450);
+      };
+      if (this._u) { this._u.onstart = this._u.onend = this._u.onerror = null; }
+      speechSynthesis.cancel();
+      this._u = u;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  },
+  activate() {
+    if (this.activated) return;
+    this.activated = true;
+    const q = this.q.splice(0);
+    if (q.length) setTimeout(() => q.forEach((t, i) => setTimeout(() => this.speak(t), i * 450)), 150);
+  }
+};
+window.addEventListener('pointerdown', () => Voice.activate(), { once: true });
+
+/* live mic level → real waveform */
+let analyser = null, micData = null, micStream = null;
+async function hookMic() {
+  if (analyser || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const an = ac.createAnalyser(); an.fftSize = 64; an.smoothingTimeConstant = .75;
+    ac.createMediaStreamSource(micStream).connect(an);
+    analyser = an; micData = new Uint8Array(an.frequencyBinCount);
+    log('🎤 live mic wired into visualizer');     
