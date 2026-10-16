@@ -1213,16 +1213,29 @@ const Voice = {
       if (!sel) return;
       sel.innerHTML = this.voices.map((v, i) =>
         `<option value="${i}">${(v.name || v.lang).slice(0, 30)}</option>`).join('');
-      const best = this.pickVoice(this.sttLang);
+      let best = -1;
+      try { best = +(localStorage.getItem('nexus_tts_voice') ?? -1); } catch (e) {}
+      if (!(best >= 0 && best < this.voices.length)) best = this.pickVoice(this.sttLang);
       if (best >= 0) sel.value = String(best);
+      if (this.voices[best]) log('🖣 voice: ' + (this.voices[best].name || this.voices[best].lang));
     };
     load();
+    const selEl = document.getElementById('ttsVoice');
+    if (selEl) selEl.addEventListener('change', () => { try { localStorage.setItem('nexus_tts_voice', selEl.value); } catch (e) {} });
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.onvoiceschanged = load;
   },
   pickVoice(lang) {
+    const fem = /veena|lekha|heera|kalpana|samantha|karen|serena|moira|tessa|zira|neerja|swara|aria|libby/i;
+    const skip = /rishi|hemant|madhur/i;
+    const ok = v => !skip.test(v.name || '');
+    const L = lang || 'en-IN';
     const pref = [
-      v => v.lang && v.lang.replace('_','-').startsWith(lang),
-      v => /^en/i.test(v.lang || ''),
+      v => ok(v) && v.lang && v.lang.replace('_','-').startsWith(L) && fem.test(v.name || ''),
+      v => ok(v) && v.lang && v.lang.replace('_','-').startsWith(L),
+      v => ok(v) && /^en/i.test(v.lang || '') && fem.test(v.name || ''),
+      v => ok(v) && /^en/i.test(v.lang || ''),
+      v => ok(v) && fem.test(v.name || ''),
+      v => ok(v),
     ];
     for (const f of pref) { const i = this.voices.findIndex(f); if (i >= 0) return i; }
     return this.voices.length ? 0 : -1;
@@ -1241,7 +1254,7 @@ const Voice = {
       }
       if (vi >= 0 && this.voices[vi]) { u.voice = this.voices[vi]; u.lang = this.voices[vi].lang; }
       else u.lang = 'en-IN';
-      u.rate = 1.03; u.pitch = 1;
+      u.rate = 1.0; u.pitch = 1.05;
       u.onstart = () => { holdForTTS = true; stopRec(); deckcap.textContent = '🔊 SPEAKING'; };
       u.onend = u.onerror = () => {
         holdForTTS = false;
