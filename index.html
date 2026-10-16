@@ -357,6 +357,11 @@
       <button class="mini" id="vaAuto" style="flex:1;border-color:rgba(255,205,90,.6);color:var(--gold)">🎲 AUTO MODE</button>
       <button class="mini" id="vaGo" style="flex:1;border-color:rgba(120,220,255,.5);color:var(--cyan)">🎬 VIDEO BANAO</button>
     </div>
+    <div class="prow2" style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(110,170,255,.14)">
+      <input type="file" id="vaFile" accept="video/*" style="flex:1;min-width:0;font-size:10px;color:var(--dim)">
+      <button class="mini" id="vaFoot" style="border-color:rgba(255,150,220,.55);color:#ffa8e8">&#128251; FOOTAGE EDIT</button>
+    </div>
+    <div style="font-size:9.5px;color:var(--dim);margin-top:5px;line-height:1.6">apna video chuno &#8594; FOOTAGE EDIT &#8594; agent khud cut+crop+captions karega (90MB tak)</div>
     <div class="prow2" style="margin-top:10px;align-items:center"><div style="flex:1;height:7px;background:rgba(110,170,255,.12);border-radius:99px;overflow:hidden"><div id="vaBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ffd75e,#ffb347);transition:.5s"></div></div></div>
     <div id="vaStat" style="font-size:10.5px;color:var(--dim);margin-top:8px;line-height:1.7">ready — AUTO dabao ya prompt likho</div>
     <div id="vaOut"></div>
@@ -2599,6 +2604,22 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
       st.innerHTML = '✗ ' + e.message + '<br>(server soya hoga — 1 min baad dobara dabao)'; setP(0);
     }
   }
+  $('vaFoot').addEventListener('click', async () => {
+    const f = $('vaFile').files && $('vaFile').files[0];
+    if (!f) { st.textContent = '\u2717 pehle video chuno (file picker se)'; return; }
+    st.textContent = '\u23f3 footage upload ho rahi hai\u2026 (' + Math.round(f.size / 1048576) + 'MB)'; setP(5);
+    const fd = new FormData();
+    fd.append('file', f);
+    fd.append('voice', $('vaVoice').value);
+    fd.append('texts', [$('vaT1').value.trim(), $('vaT2').value.trim(), $('vaT3').value.trim()].join('|'));
+    try {
+      const r = await fetch(VS + '/footage', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.detail || ('HTTP ' + r.status));
+      const url = await poll(j.id);
+      if (url) { show(url); Voice.speak('Aapki footage edit ho gayi. Dekho aur post karo.'); }
+    } catch (e) { st.innerHTML = '\u2717 ' + e.message; setP(0); }
+  });
   $('vaAuto').addEventListener('click', () => start('/video/auto', { topic: $('vaPrompt').value.trim(), scenes: +$('vaScenes').value, voice: $('vaVoice').value }, '🤖 Agent topic research kar raha hai…'));
   $('vaGo').addEventListener('click', () => {
     const p = $('vaPrompt').value.trim(); if (!p) { st.textContent = '✗ pehle prompt likho (ya AUTO dabao)'; return; }
