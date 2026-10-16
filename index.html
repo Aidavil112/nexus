@@ -86,6 +86,7 @@
     margin-right:8px;vertical-align:1px;animation:blink 1.6s infinite}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
   .hr{display:flex;gap:8px}
+  #lvTop{display:none;font-size:10px;letter-spacing:1.5px}
   button.g{font:inherit;background:var(--panel);border:1px solid var(--line);color:var(--text);
     font-size:10px;letter-spacing:1.8px;padding:8px 14px;border-radius:9px;cursor:pointer;transition:.2s}
   button.g:hover{border-color:rgba(140,200,255,.5);box-shadow:0 0 14px rgba(90,170,255,.2);color:#fff}
@@ -114,7 +115,7 @@
 
   /* ---------- bottom deck ---------- */
   #deck{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:10;text-align:center;pointer-events:none}
-  #wave{width:min(520px,86vw);height:64px}
+  #wave{width:min(340px,64vw);height:34px}
   .deckcap{font-size:10px;letter-spacing:6px;color:var(--gold);margin-top:-4px;
     text-shadow:0 0 12px rgba(255,190,60,.55)}
   .deckrow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:9px;pointer-events:auto;max-width:94vw}
@@ -303,6 +304,8 @@
     header .sub{display:none}
     header{top:52px;padding:6px 12px}
     .hl .clock{font-size:15px}
+    aside#chat{top:52px;width:100vw;border-left:none;border-top:1px solid var(--line)}
+    #lvTop{display:inline-block;border-color:rgba(255,110,110,.6);color:#ff9d9d}
   }
   ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(110,170,255,.25);border-radius:4px}
 </style>
@@ -368,6 +371,7 @@
     <button class="g" id="ctrBtn">☰ CONTROL</button>
     <button class="g" id="selfChk">⚙ SELF-CHECK</button>
     <button class="g" id="helpBtn">❓ HELP</button>
+    <button class="g" id="lvTop">🔴 LIVE</button>
     <button class="g" id="chatBtn">CHAT ▾</button>
   </div>
 </header>
@@ -781,7 +785,7 @@ function resize() {
   ORB = { x: W * .5, y: H * .40 };
   R = clamp(Math.min(W, H) * .15, 78, 175);
   const wr = wave.getBoundingClientRect();
-  wave.width = wr.width * DPR; wave.height = 64 * DPR; wctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  wave.width = wr.width * DPR; wave.height = 34 * DPR; wctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   buildStars();
 }
 window.addEventListener('resize', resize);
@@ -1092,16 +1096,16 @@ function drawTwinkles() {
 let amp = 0;
 const micLv = new Array(60).fill(0);
 function drawWave() {
-  const w = wave.width / DPR, h = 64;
+  const w = wave.width / DPR, h = 34;
   wctx.clearRect(0, 0, w, h);
   amp += ((S.listening ? 1 : .05) - amp) * Math.min(1, dtL * 3);
-  const bars = 60, bw = 4, gap = w / bars;
+  const bars = 44, bw = 3, gap = w / bars;
   let live = false;
   if (analyser && S.listening && micData) { analyser.getByteFrequencyData(micData); live = true; }
   const g = wctx.createLinearGradient(0, 0, w, 0);
   g.addColorStop(0, '#ffd75e'); g.addColorStop(.5, '#ffefd0'); g.addColorStop(1, '#ffb347');
   wctx.fillStyle = g;
-  wctx.shadowColor = 'rgba(255,190,60,.8)'; wctx.shadowBlur = 7;
+  wctx.shadowColor = 'rgba(255,190,60,.55)'; wctx.shadowBlur = 4;
   for (let i = 0; i < bars; i++) {
     const v = Math.sin(now * 3.1 + i * .55) * .5 + Math.sin(now * 5.7 + i * 1.3) * .3
             + Math.sin(now * 9.3 + i * 2.1) * .2;
@@ -1114,7 +1118,7 @@ function drawWave() {
     } else {
       n = Math.abs(v) * (.6 + .4 * Math.random()) * amp;
     }
-    const bh = Math.max(2, n * (h - 10));
+    const bh = Math.max(2, n * (h - 6));
     const x = i * gap + (gap - bw) / 2;
     wctx.fillRect(x, (h - bh) / 2, bw, bh);
   }
@@ -1287,7 +1291,7 @@ const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition || nu
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function noSTT() {
   if (IS_IOS) {
-    toast('IPHONE: YAHAN VOICE INPUT SUPPORT NAHI · CHAT ME TYPE KARO — MAIN BOLKAR JAWAB DUNGA 🔊');
+    toast('LIVE VOICE: SAFARI ME KHOLO + SIRI DICTATION ON · YA CHAT ME TYPE KARO — MAIN BOLKAR JAWAB DUNGA 🔊');
     log('✗ iPhone browsers me speech-to-text nahi hai — neeche CHAT khula hai, type karo (main bolunga)');
   } else {
     toast('MIC BLOCKED — FILE DOWNLOAD KARKE CHROME ME KHOLO');
@@ -1304,7 +1308,7 @@ function startRec() {
   hookMic();
   rec = new SRClass();
   rec.lang = Voice.sttLang; rec.interimResults = true;
-  rec.continuous = liveMode; rec.maxAlternatives = 1;
+  rec.continuous = false; rec.maxAlternatives = 1; /* iOS-safe: restart loop handles live */
   recOn = true; btnVoice.classList.add('rec'); btnLive.classList.add('rec');
   if (S.listening) deckcap.textContent = liveMode ? '🔴 LIVE — BOLTE RAHO' : '🎤 GO AHEAD — I\'M LISTENING';
   log('🎤 ear open (' + Voice.sttLang + (liveMode ? ' · live loop' : '') + ')');
@@ -1522,6 +1526,11 @@ const chatEl = document.getElementById('chat'), msgs = document.getElementById('
 document.getElementById('chatBtn').addEventListener('click', () => { chatEl.classList.toggle('open'); document.getElementById('cinput').focus(); });
 document.getElementById('btnChat').addEventListener('click', () => { chatEl.classList.add('open'); document.getElementById('cinput').focus(); });
 document.getElementById('chatClose').addEventListener('click', () => chatEl.classList.remove('open'));
+const lvTop = document.getElementById('lvTop');
+if (lvTop) {
+  lvTop.addEventListener('click', () => document.getElementById('btnLive').click());
+  setInterval(() => { lvTop.textContent = document.getElementById('btnLive').classList.contains('on') ? '🔴 LIVE ON' : '🔴 LIVE'; }, 700);
+}
 function addMsg(cls, who, text) {
   const d = document.createElement('div');
   d.className = 'msg ' + cls;
