@@ -256,7 +256,7 @@
   #ctrCopy{width:100%;margin-top:8px;text-align:center}
 
   /* ---------- motion pack ---------- */
-  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}} 
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
   @keyframes riseIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
   @keyframes letterIn{from{opacity:0;transform:translateY(26px) rotateX(90deg)}to{opacity:1;transform:none}}
   @keyframes ringPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.75}}
@@ -337,7 +337,7 @@
   <div class="pcard"><h3>YOUR LIVE SITE</h3><div id="siteUrlBox" style="font-size:11px;color:var(--cyan);word-break:break-all;margin-bottom:8px"></div>
   <div class="prow2"><button class="mini" id="goSite2">🌐 SITE KHOLDO</button><button class="mini" id="copySite">⎘ COPY LINK</button></div></div>
 </div></section>
-<section class="view" id="v-binance"><div class="vwrap"><div class="vtitle">嫦 BINANCE — API · BALANCE</div><div id="binanceMove"></div></div></section>
+<section class="view" id="v-binance"><div class="vwrap"><div class="vtitle">⛣ BINANCE — API · BALANCE</div><div id="binanceMove"></div></div></section>
 <section class="view" id="v-editor"><div class="vwrap"><div class="vtitle">✂ NEXUS CUT — VIDEO EDITOR</div>
   <div class="pcard"><h3>REEL / VIDEO EDITOR</h3>
     <p style="font-size:11px;color:var(--dim);line-height:1.8">Cut · music · text · 10 Hollywood looks · export. Editor alag page par khulta hai:</p>
@@ -524,7 +524,7 @@
         <button class="mini" id="ghAuto">AUTO: OFF</button>
         <button class="mini" id="ghSite" style="border-color:rgba(79,216,255,.55);color:#4fd8ff">🌐 SITE KHOLDO</button>
       </div>
-           <div id="ghStat" style="margin-top:6px;font-size:9px;color:var(--dim)">○ token nahi — setup karo (2 min, free)</div>
+      <div id="ghStat" style="margin-top:6px;font-size:9px;color:var(--dim)">○ token nahi — setup karo (2 min, free)</div>
     </div>
     <div class="csec" id="bnSec">⛣ BINANCE CONNECT — API (READ-ONLY)</div>
     <div class="siri">
@@ -837,8 +837,8 @@ setInterval(cycleVoices, 3600); renderVoices();
 if (document.readyState === 'complete') initPages(); else window.addEventListener('load', initPages);
 
 /* ---------- clock ---------- */
-const clockEl = document.getElementById('clock'), sysEl = document.getElementById('sysState'); 
- function tickClock() { clockEl.textContent = new Date().toTimeString().slice(0, 5); }
+const clockEl = document.getElementById('clock'), sysEl = document.getElementById('sysState');
+function tickClock() { clockEl.textContent = new Date().toTimeString().slice(0, 5); }
 setInterval(tickClock, 1000); tickClock();
 
 /* ---------- listening toggle ---------- */
@@ -1266,8 +1266,8 @@ async function hookMic() {
     const an = ac.createAnalyser(); an.fftSize = 64; an.smoothingTimeConstant = .75;
     ac.createMediaStreamSource(micStream).connect(an);
     analyser = an; micData = new Uint8Array(an.frequencyBinCount);
-    log('🎤 live mic wired into visualizer'); 
-      } catch (e) {
+    log('🎤 live mic wired into visualizer');
+  } catch (e) {
     log('✗ mic blocked here — file download karke Chrome me kholo');
   }
 }
@@ -1944,8 +1944,8 @@ async function fetchWeatherStr() {
     if (!r.ok) return '';
     const j = await r.json();
     const c = j.current_weather; if (!c) return '';
-    const codes = { 0: 'saaf aasman', 1: 'thode baadal', 2: 'baadal', 3: 'ghane baadal', 45: 'kohra', 48: 'kohra', 51: 'phuhaar', 53: 'phuhaar', 55: 'phuhaar', 61: 'halki baarish', 63: 'baarish', 65: 'tez baarish', 80: 'baarish ke 
-  try {    return 'Weather (Bengaluru): ' + Math.round(c.temperature) + '\u00B0C, ' + (codes[c.weathercode] || 'mausam') + ', hawa ' + Math.round(c.windspeed) + ' km/h.';
+    const codes = { 0: 'saaf aasman', 1: 'thode baadal', 2: 'baadal', 3: 'ghane baadal', 45: 'kohra', 48: 'kohra', 51: 'phuhaar', 53: 'phuhaar', 55: 'phuhaar', 61: 'halki baarish', 63: 'baarish', 65: 'tez baarish', 80: 'baarish ke chhinte', 81: 'baarish', 82: 'musaldhar', 95: 'toofan', 96: 'toofan + olle', 99: 'toofan + olle' };
+    return 'Weather (Bengaluru): ' + Math.round(c.temperature) + '\u00B0C, ' + (codes[c.weathercode] || 'mausam') + ', hawa ' + Math.round(c.windspeed) + ' km/h.';
   } catch (e) { return ''; }
 }
 
@@ -2000,6 +2000,210 @@ setInterval(() => {
     ],
     showSymbolLogo: true, isTransparent: true, displayMode: 'adaptive', colorTheme: 'dark', locale: 'in'
   });
+  const box = host.querySelector('.tradingview-widget-container');
+  if (box) box.appendChild(s);
+})();
+
+/* ---------- shopify agent ---------- */
+const SB = { url: '' };
+try { SB.url = localStorage.getItem('nexus_sb') || ''; } catch (e) {}
+const sbUrl = document.getElementById('sbUrl'), sbNiche = document.getElementById('sbNiche');
+const sbStat = document.getElementById('sbStat'), sbList = document.getElementById('sbList');
+sbUrl.value = SB.url;
+document.getElementById('sbSave').addEventListener('click', () => {
+  SB.url = sbUrl.value.trim().replace(/\/$/, '');
+  try { localStorage.setItem('nexus_sb', SB.url); } catch (e) {}
+  sbStatUpd();
+  toast(SB.url ? 'BACKEND SAVED \u2014 QUEUE SYNC KAR RAHA HOON' : 'URL KHALI HAI');
+  if (SB.url) sbSyncQueue();
+});
+function sbQueue() { try { return JSON.parse(localStorage.getItem('nexus_sb_queue') || '[]'); } catch (e) { return []; } }
+function sbQueueSave(q) { try { localStorage.setItem('nexus_sb_queue', JSON.stringify(q)); } catch (e) {} }
+function sbStatUpd() {
+  const q = sbQueue();
+  if (!SB.url) sbStat.textContent = q.length
+    ? '\U0001F4E5 ' + q.length + ' product approve hue \u2014 QUEUE me hain. Backend judte hi khud Shopify me add honge (PHONE-SETUP guide dekho)'
+    : '\u25CB backend nahi juda \u2014 par RESEARCH abhi bhi chalegi (Gemini se). Add karne ke liye backend chahiye.';
+  else sbStat.textContent = '\u2713 backend saved \u2014 RESEARCH dabao' + (q.length ? ' (queue: ' + q.length + ')' : '');
+}
+async function sbSyncQueue() {
+  const q = sbQueue();
+  if (!SB.url || !q.length) return;
+  toast('QUEUE SYNC: ' + q.length + ' PRODUCTS\u2026');
+  const left = [];
+  for (const it of q) {
+    try {
+      const r = await fetch(SB.url + '/add', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(it)
+      });
+      if (r.ok) { log('\U0001F6D2 queue synced \u2014 ' + it.title); continue; }
+    } catch (e) {}
+    left.push(it);
+  }
+  sbQueueSave(left);
+  if (q.length && !left.length) { toast('SAB PRODUCTS SHOPIFY ME ADD \u2713'); Voice.speak('Queue synced. All products added to Shopify.'); }
+  sbStatUpd();
+}
+async function sbResearch() {
+  Voice.activate();
+  const niche = sbNiche.value.trim() || 'trending gadgets India';
+  sbList.innerHTML = '';
+  let ideas = null;
+  if (SB.url) {
+    sbStat.textContent = '\u23F3 Gemini soch raha hai: ' + niche + ' \u2026';
+    try {
+      const r = await fetch(SB.url + '/research', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niche })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.detail || ('HTTP ' + r.status));
+      ideas = j.ideas;
+    } catch (e) {
+      sbStat.textContent = '\u2717 backend fail: ' + String(e.message).slice(0, 60);
+      log('\u2717 shopify research fail: ' + e.message);
+      toast('BACKEND SE NAHI HUA \u2014 DIRECT GEMINI TRY KAR RAHA HOON');
+    }
+  }
+  if (!ideas) {
+    if (!Brain.key) { sbStatUpd(); toast('GEMINI KEY DAALO (REAL BRAIN me) \u2014 tab research chalegi'); return; }
+    sbStat.textContent = '\u23F3 direct Gemini (phone mode): ' + niche + ' \u2026';
+    const prompt = 'You are an expert e-commerce product researcher for an Indian Shopify dropshipping store.\nNiche: ' + niche + '\nSuggest exactly 5 winning products. Reply ONLY with a JSON array, no markdown:\n[{"title":"product name","description":"3-4 line selling HTML description with benefits","price":499,"seo_title":"<=60 chars","why":"1 line why it can sell in India"}]';
+    const txt = await llm([{ role: 'user', content: prompt }], 1400);
+    if (!txt) { sbStat.textContent = '\u2717 Gemini se nahi hua \u2014 key/net check karo'; return; }
+    const m = txt.match(/\[[\s\S]*\]/);
+    if (!m) { sbStat.textContent = '\u2717 Gemini response samajh nahi aaya'; return; }
+    try { ideas = JSON.parse(m[0]); } catch (e) { sbStat.textContent = '\u2717 JSON parse fail'; return; }
+    sbStatUpd();
+  }
+  const j = { ideas };
+  {
+    (j.ideas || []).forEach((it, i) => {
+      const d = document.createElement('div');
+      d.style.cssText = 'border:1px solid rgba(110,170,255,.18);border-radius:9px;padding:8px;margin-bottom:6px;background:rgba(12,24,50,.5)';
+      d.innerHTML = '<b style="font-size:10.5px;color:#ffe9ad">' + (i + 1) + '. ' + it.title + '</b>' +
+        '<span style="float:right;color:var(--gold);font-size:10px">\u20B9' + it.price + '</span><br>' +
+        '<span style="font-size:9px;color:var(--dim)">' + (it.why || '') + '</span>';
+      const b = document.createElement('button');
+      b.className = 'mini'; b.style.marginTop = '5px'; b.textContent = '\u2713 ADD TO SHOPIFY';
+      b.addEventListener('click', async () => {
+        b.textContent = '\u23F3 ADDING\u2026'; b.disabled = true;
+        const payload = { title: it.title, description: it.description, price: it.price, status: 'DRAFT' };
+        if (!SB.url) {
+          const q = sbQueue();
+          if (!q.some(x => x.title === it.title)) { q.push(payload); sbQueueSave(q); }
+          b.textContent = '\U0001F4E5 QUEUED';
+          toast('QUEUE ME SAVE \u2014 BACKEND JUDTE HI SHOPIFY ME ADD HOGA');
+          Voice.speak('Approved. Queue me save ho gaya. Backend judte hi Shopify me add ho jayega.');
+          sbStatUpd();
+          return;
+        }
+        try {
+          const r2 = await fetch(SB.url + '/add', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const j2 = await r2.json().catch(() => ({}));
+          if (!r2.ok) throw new Error(j2.detail || ('HTTP ' + r2.status));
+          b.textContent = '\u2713 ADDED (DRAFT)';
+          toast('SHOPIFY ME ADD HO GAYA: ' + it.title.slice(0, 26).toUpperCase());
+          Voice.speak('Product added to your Shopify store as draft.');
+          log('\U0001F6D2 shopify add \u2014 ' + it.title);
+        } catch (e2) {
+          b.textContent = '\u2717 FAIL \u2014 ' + String(e2.message).slice(0, 30);
+          log('\u2717 shopify add fail: ' + e2.message);
+        }
+      });
+      d.appendChild(b);
+      sbList.appendChild(d);
+    });
+    sbStat.textContent = '\u2713 ' + (j.ideas || []).length + ' ideas mile \u2014 APPROVE karo jo pasand aaye';
+    Voice.speak((j.ideas || []).length + ' product ideas ready. Approve karo jo pasand aaye.');
+  }
+}
+document.getElementById('sbGo').addEventListener('click', sbResearch);
+sbStatUpd();
+
+/* ---------- TV ticker se trade khulwad (pill) ---------- */
+(function () {
+  const host = document.getElementById('tvTicker'); if (!host) return;
+  const b = document.createElement('button');
+  b.className = 'mini';
+  b.style.cssText = 'width:100%;margin-top:5px;border-color:rgba(255,205,90,.55);color:var(--gold);font-size:10px;padding:8px';
+  b.textContent = '\U0001F6D2 ISI TICKER KE STOCKS TRADE KARO \u2014 BUY / SELL';
+  b.addEventListener('click', () => {
+    const el = document.getElementById('ptBody');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast('STOCK CHUNO \u2192 BUY / SELL');
+    log('\U0001F4F0 trading panel opened from TradingView ticker');
+  });
+  host.appendChild(b);
+})();
+
+/* ---------- TRADING DESK — 6 bots (inspired by 0xNevsky desk) ----------
+   Screener(3-candle) -> Cartographer(FVG zone) -> Risk Officer(1% cap)
+   -> Gate(only YOUR tap trades) -> Exit Clerk(rule exits) -> Auditor(R journal) */
+const DESK = { on: false, candles: {}, cnt: 0, alerts: [], pos: {}, journal: [], equity: [] };
+try { const sv = JSON.parse(localStorage.getItem('nexus_desk') || 'null'); if (sv) { DESK.journal = sv.journal || []; DESK.equity = sv.equity || []; } } catch (e) {}
+function deskSave() { try { localStorage.setItem('nexus_desk', JSON.stringify({ journal: DESK.journal, equity: DESK.equity })); } catch (e) {} }
+const CANDLE_TICKS = 5, STALE_CANDLES = 24;
+
+/* ================= GMAIL RELAY + FORGE AUTO-DEPLOY ================= */
+const GMAX = { url: localStorage.getItem('nexus_gm') || 'https://script.google.com/macros/s/AKfycby6jO96WSDecYrEiENbKeOaxafNg0nWa_lg3wxZHK0VSQjyaeSIbTfqNy5dIVAo8MrL/exec', busy: false };
+const GH   = { u: localStorage.getItem('nexus_ghu') || '', r: localStorage.getItem('nexus_ghr') || '',
+               t: localStorage.getItem('nexus_ght') || '', auto: localStorage.getItem('nexus_ghauto') === '1',
+               last: '', busy: false };
+function siteUrl() {
+  const u = (GH.u || 'Aidavil112').toLowerCase().trim();
+  const r = (GH.r || 'nexus').trim();
+  return 'https://' + u + '.github.io/' + r + '/';
+}
+function openSite() { const url = siteUrl(); window.open(url, '_blank'); log('SITE: ' + url); return url; }
+function gmStat(m) { const el = document.getElementById('gmStat'); if (el) el.textContent = m; }
+function ghStat(m) { const el = document.getElementById('ghStat'); if (el) el.textContent = m; }
+function openGmailSetup() { const b = document.getElementById('ctrBtn'); if (b) b.click(); const s = document.getElementById('gmailSec'); if (s) setTimeout(() => s.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400); }
+function openForgeSetup() { const b = document.getElementById('ctrBtn'); if (b) b.click(); const s = document.getElementById('forgeSec'); if (s) setTimeout(() => s.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400); }
+function gmSec() { return localStorage.getItem('nexus_gmsec') || 'nexus'; }
+
+function gmailSend(to, sub, body) {
+  if (!GMAX.url) { openGmailSetup(); return Promise.resolve('Gmail relay setup baaki hai — GMAIL section khol diya, 5 min ka setup hai (script.google.com).'); }
+  if (!to || !/.+@.+\..+/.test(to)) return Promise.resolve('Sahi email daalo compose me.');
+  GMAX.busy = true; gmStat('● sending…');
+  return fetch(GMAX.url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ token: gmSec(), action: 'send', to, subject: sub || '(no subject)', text: body || '' }) })
+    .then(r => r.text()).then(() => { GMAX.busy = false; gmStat('● bhej diya ✓ ' + to); agentFlash && agentFlash('Mailman'); log('✉ mail sent → ' + to); return 'Mail bhej diya: ' + to + ' ✓'; })
+    .catch(e => { GMAX.busy = false; gmStat('✗ fail: ' + e.message); return 'Mail fail: ' + e.message + ' — URL /exec wala hai? Deployment "Anyone" hai?'; });
+}
+function gmailInbox() {
+  if (!GMAX.url) { openGmailSetup(); return Promise.resolve('Pehle relay URL save karo (GMAIL section).'); }
+  gmStat('● inbox la raha hoon…');
+  return fetch(GMAX.url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ token: gmSec(), action: 'read', n: 5 }) })
+    .then(r => r.json()).then(list => {
+      list = list || [];
+      document.getElementById('gmOut').innerHTML = list.map(m => '<b>' + m.from + '</b>: ' + m.subject).join('<br>') || '(inbox khali)';
+      gmStat('● top ' + list.length + ' mails aa gaye');
+      return list.length ? 'Inbox ke top mails: ' + list.slice(0, 3).map(m => m.subject).join('; ') : 'Inbox khali hai.';
+    })
+    .catch(e => { gmStat('✗ ' + e.message); return 'Inbox fail: ' + e.message; });
+}
+
+function selfCapture() {
+  return fetch(location.href, { cache: 'no-store' }).then(r => r.text())
+    .catch(() => '<!DOCTYPE html>\n' + document.documentElement.outerHTML);
+}
+function ghApi(path, opts) {
+  return fetch('https://api.github.com' + path, Object.assign(
+    { headers: { 'Authorization': 'Bearer ' + GH.t, 'Accept': 'application/vnd.github+json' } }, opts || {}))
+    .then(async r => { if (!r.ok) { const t = await r.text(); throw new Error(r.status + ': ' + t.slice(0, 80)); } return r.json(); });
+}
+function tinyHash(s) { let x = 5381; for (let i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) >>> 0; return x.toString(36); }
+async function forgeDeploy(silent) {
+  if (GH.busy) return 'Deploy pehle se chal raha hai…';
+  if (!GH.u || !GH.r || !GH.t) { openForgeSetup(); return 'FORGE setup adhura — section khol diya: github token + username + repo daalo (2 min, free). Token chat me kabhi nahi!'; }
+  GH.busy = true; ghStat('● FORGE: files pack ho rahi hain…'); agentFlash && agentFlash('Forge'); agentFlash && agentFlash('Relay');
+  try {
     const src = await selfCapture();
     const same = localStorage.getItem('nexus_ghhash') === tinyHash(src);
     if (same && silent) { GH.busy = false; return null; }
