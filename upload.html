@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>📲 INSTA UPLOAD — NEXUS</title>
+<style>
+:root{--bg:#030814;--card:rgba(12,24,50,.55);--line:rgba(110,170,255,.18);--gold:#ffd75e;--cyan:#7fd8ff;--dim:#8fa8cf;--ok:#59e6a8;--bad:#ff8a8a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg) radial-gradient(1200px 600px at 50% -10%, rgba(30,80,190,.25), transparent);color:#e8f2ff;min-height:100vh;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;padding:0 0 40px}
+.top{position:sticky;top:0;background:rgba(5,10,24,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:5}
+.top .logo{font-weight:800;letter-spacing:3px;color:var(--gold)}
+.wrap{max-width:560px;margin:0 auto;padding:18px 16px}
+h1{font-size:17px;letter-spacing:2px;margin:14px 0 4px}
+.sub{font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:16px;line-height:1.6}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:10px;letter-spacing:2px;color:var(--cyan);margin:10px 0 6px}
+input,textarea,select{width:100%;background:rgba(3,8,20,.7);border:1px solid var(--line);color:#e8f2ff;border-radius:10px;padding:12px;font-size:14px;outline:none;font-family:inherit}
+textarea{min-height:84px;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:rgba(255,205,90,.5)}
+.row{display:flex;gap:8px}
+.row input{flex:1;min-width:0}
+.hint{font-size:10.5px;color:var(--dim);margin-top:6px;line-height:1.6}
+.btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer;font-family:inherit}
+.gold{background:linear-gradient(135deg,#ffd75e,#ffb347);color:#231a02;margin-top:14px;box-shadow:0 0 24px rgba(255,190,60,.25)}
+.ghost{background:transparent;border:1px solid var(--line);color:var(--cyan);margin-top:8px}
+.stat{margin-top:14px;border-radius:12px;border:1px solid var(--line);background:rgba(3,8,20,.6);padding:12px;font-size:12px;line-height:1.7;color:var(--dim);min-height:20px;white-space:pre-wrap;word-break:break-word}
+.stat.ok{border-color:rgba(90,225,180,.5);color:var(--ok)}
+.stat.bad{border-color:rgba(255,120,120,.5);color:var(--bad)}
+.tag{display:inline-block;font-size:9px;letter-spacing:2px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--dim);margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="top"><span class="logo">NEXUS</span><span style="font-size:10px;letter-spacing:2px;color:var(--dim)">INSTA UPLOAD · ALAG TOOL</span></div>
+<div class="wrap">
+<h1>📲 INSTAGRAM POST — VIDEO / REEL</h1>
+<div class="sub">Link do + caption likho → NEXUS server khud Instagram par post kar dega (PostZen official raasta — koi scraper nahi)</div>
+
+<div class="card">
+  <label>1 · SERVER URL</label>
+  <div class="row"><input id="srv" placeholder="https://nexus-agent-ycck.onrender.com"><button class="btn ghost" style="width:auto;margin:0;padding:0 16px" id="chk">CHECK</button></div>
+  <div class="hint">Ye tumhara Render server hai — ek baar set, phir yaad rahega</div>
+
+  <label>2 · 🎬 VIDEO KA LINK (public)</label>
+  <input id="media" placeholder="https://…/video.mp4">
+  <div class="hint">⚠️ Link aisa chahiye ki browser me kholte hi VIDEO CHALE (.mp4 etc). instagram.com/reel/… wala PAGE link NAHI chalega. Limit 100MB.</div>
+
+  <label>3 · ✍️ CAPTION</label>
+  <textarea id="cap" placeholder="#reels #trending …"></textarea>
+
+  <label>4 · 💬 PEHLA COMMENT (optional)</label>
+  <input id="fc" placeholder="link / hashtags comment me">
+
+  <label>5 · TYPE</label>
+  <select id="ptype">
+    <option value="reel">🎬 REEL (video, 9:16)</option>
+    <option value="feed">🖼 FEED</option>
+    <option value="story">⚡ STORY</option>
+  </select>
+</div>
+
+<button class="btn gold" id="go">🚀 POST KARO — INSTAGRAM PAR</button>
+<div class="stat" id="stat">Status: ready. Pehle CHECK, phir POST.</div>
+
+<div class="card" style="margin-top:14px">
+<div class="tag">NOTE</div>
+<div class="hint">· Ye page NEXUS site ka hissa NAHI — alag tool (index.html ko haath bhi nahi lagaya)<br>· Koi key is page me NAHI — key server ke andar surakshit hai<br>· Post hote hi neeche PostZen ka post-ID dikhega</div>
+</div>
+</div>
+<script>
+const $=id=>document.getElementById(id), stat=$('stat');
+const srvEl=$('srv');
+srvEl.value=localStorage.getItem('insta_srv')||'https://nexus-agent-ycck.onrender.com';
+srvEl.addEventListener('change',()=>localStorage.setItem('insta_srv',srvEl.value.trim().replace(/\/$/,'')));
+function srv(){return srvEl.value.trim().replace(/\/$/,'')}
+$('chk').addEventListener('click',async()=>{
+  stat.className='stat'; stat.textContent='Server check kar raha hoon…';
+  try{
+    const r=await fetch(srv()+'/health',{cache:'no-store'});
+    const t=await r.text();
+    if(r.ok){stat.className='stat ok';stat.textContent='✅ SERVER ZINDA (HTTP '+r.status+')\n'+t.slice(0,180);}
+    else{stat.className='stat bad';stat.textContent='⚠️ Server ON hai par andar issue (HTTP '+r.status+')\n'+t.slice(0,220)+(r.status>=500?'\n\n500 = env/key issue — Render Logs screenshot bhejo, fix ke baad POST chalega.':'');}
+  }catch(e){stat.className='stat bad';stat.textContent='❌ Server tak pahunch nahi paya: '+e.message+'\n(Render free tier soya hoga — 1 min baad phir CHECK dabao)';}
+});
+$('go').addEventListener('click',async()=>{
+  const m=$('media').value.trim(), c=$('cap').value.trim(), fc=$('fc').value.trim(), pt=$('ptype').value;
+  if(!m){stat.className='stat bad';stat.textContent='❌ PEHLE VIDEO KA LINK DAALO';return}
+  stat.className='stat'; stat.textContent='⏳ PostZen ko bhej raha hoon… (10-40 sec lag sakte hain)';
+  const body={content:c||'(no caption)',platform:'instagram',mediaUrl:m,postType:pt};
+  if(fc)body.firstComment=fc;
+  try{
+    const r=await fetch(srv()+'/post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const t=await r.text(); let j={}; try{j=JSON.parse(t)}catch(e){}
+    if(r.ok&&j.ok){stat.className='stat ok';stat.textContent='🎉 POST HO GAYA — INSTAGRAM PAR JA RAHA HAI!\n'+JSON.stringify(j.post,null,1).slice(0,400);}
+    else{stat.className='stat bad';stat.textContent='❌ HTTP '+r.status+'\n'+t.slice(0,400)+(r.status>=500?'\n\n(Ye 500 hai — server ka env issue. Render Logs bhejo, main fix karunga.)':'');}
+  }catch(e){stat.className='stat bad';stat.textContent='❌ Network fail: '+e.message+'\n(Server soya hoga — CHECK dabao, 1 min wait, phir POST)'}
+});
+</script>
+</body>
+</html>
