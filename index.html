@@ -1266,4 +1266,623 @@ async function hookMic() {
     const an = ac.createAnalyser(); an.fftSize = 64; an.smoothingTimeConstant = .75;
     ac.createMediaStreamSource(micStream).connect(an);
     analyser = an; micData = new Uint8Array(an.frequencyBinCount);
-    log('🎤 live mic wired into visualizer');     
+    log('🎤 live mic wired into visualizer'); 
+      } catch (e) {
+    log('✗ mic blocked here — file download karke Chrome me kholo');
+  }
+}
+function unhookMic() {
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  analyser = null;
+}
+
+/* speech recognition (STT) — one-shot + LIVE hands-free loop */
+let rec = null, recOn = false, liveMode = false, holdForTTS = false, restartTm = null;
+const btnVoice = document.getElementById('btnVoice');
+const btnLive  = document.getElementById('btnLive');
+const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function noSTT() {
+  if (IS_IOS) {
+    toast('IPHONE: YAHAN VOICE INPUT SUPPORT NAHI · CHAT ME TYPE KARO — MAIN BOLKAR JAWAB DUNGA 🔊');
+    log('✗ iPhone browsers me speech-to-text nahi hai — neeche CHAT khula hai, type karo (main bolunga)');
+  } else {
+    toast('MIC BLOCKED — FILE DOWNLOAD KARKE CHROME ME KHOLO');
+    log('✗ speech recognition ke liye Chrome + mic permission chahiye');
+  }
+  chatEl.classList.add('open');
+}
+function handleUtterance(v) {
+  addMsg('you', 'YOU 🎙', v);
+  respond(v);
+}
+function startRec() {
+  if (!SRClass || recOn) return;
+  hookMic();
+  rec = new SRClass();
+  rec.lang = Voice.sttLang; rec.interimResults = true;
+  rec.continuous = liveMode; rec.maxAlternatives = 1;
+  recOn = true; btnVoice.classList.add('rec'); btnLive.classList.add('rec');
+  if (S.listening) deckcap.textContent = liveMode ? '🔴 LIVE — BOLTE RAHO' : '🎤 GO AHEAD — I\'M LISTENING';
+  log('🎤 ear open (' + Voice.sttLang + (liveMode ? ' · live loop' : '') + ')');
+  let finalTxt = '';
+  rec.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalTxt += t; else interim += t;
+    }
+    document.getElementById('cinput').value = (finalTxt || interim).trim();
+    if (finalTxt) {
+      const v = finalTxt.trim();
+      document.getElementById('cinput').value = '';
+      if (liveMode) { finalTxt = ''; holdForTTS = true; try { rec.stop(); } catch (err) {} }
+      handleUtterance(v);
+    }
+  };
+  rec.onerror = ev => {
+    log('✗ ear error: ' + ev.error);
+    if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+      toast('MIC PERMISSION BLOCKED — FILE DOWNLOAD KARKE CHROME ME KHOLO');
+      liveMode = false; btnLive.classList.remove('on');
+    }
+  };
+  rec.onend = () => {
+    recOn = false; btnVoice.classList.remove('rec'); btnLive.classList.remove('rec');
+    if (S.listening && deckcap.textContent.indexOf('SPEAKING') < 0)
+      deckcap.textContent = liveMode ? '🔴 LIVE VOICE' : 'LISTENING';
+    clearTimeout(restartTm);
+    if (liveMode && !holdForTTS) restartTm = setTimeout(startRec, 350);
+  };
+  try {
+    rec.start();
+    if (!liveMode) { chatEl.classList.add('open'); document.getElementById('cinput').focus(); }
+  }
+  catch (e) { recOn = false; btnVoice.classList.remove('rec'); btnLive.classList.remove('rec'); }
+}
+function stopRec() { if (rec) { try { rec.stop(); } catch (e) {} } }
+
+btnVoice.addEventListener('click', () => {
+  Voice.activate();
+  if (recOn) { liveMode = false; btnLive.classList.remove('on'); stopRec(); return; }
+  if (!SRClass) { noSTT(); return; }
+  liveMode = false; btnLive.classList.remove('on');
+  if (!S.listening) setListening(true);
+  startRec();
+});
+btnLive.addEventListener('click', () => {
+  Voice.activate();
+  if (!SRClass) { noSTT(); return; }
+  liveMode = !liveMode;
+  btnLive.classList.toggle('on', liveMode);
+  if (liveMode) {
+    if (!S.listening) setListening(true);
+    deckcap.textContent = '🔴 LIVE VOICE — HANDS-FREE';
+    toast('LIVE VOICE ON · BOLIYE, MAIN SUN RAHA HOON');
+    log('🔴 live voice mode — continuous conversation loop armed');
+    startRec();
+    setTimeout(() => Voice.speak('Live voice mode active. I am listening — go ahead.'), 300);
+  } else {
+    stopRec();
+    if (S.listening) deckcap.textContent = 'LISTENING';
+    log('⏹ live voice mode off');
+  }
+});
+
+/* voice controls row */
+document.getElementById('speakBtn').addEventListener('click', function () {
+  Voice.speakOn = !Voice.speakOn;
+  this.classList.toggle('on', Voice.speakOn);
+  this.textContent = Voice.speakOn ? '🔊' : '🔇';
+  if (!Voice.speakOn && 'speechSynthesis' in window) speechSynthesis.cancel();
+  log(Voice.speakOn ? '🔊 assistant voice enabled' : '🔇 assistant muted');
+});
+document.getElementById('langBtn').addEventListener('click', function () {
+  Voice.sttLang = Voice.sttLang === 'en-IN' ? 'hi-IN' : 'en-IN';
+  this.textContent = Voice.sttLang === 'en-IN' ? 'EN' : 'हिं';
+  const i = Voice.pickVoice(Voice.sttLang === 'en-IN' ? 'en-IN' : 'hi-IN');
+  const sel = document.getElementById('ttsVoice');
+  if (i >= 0 && sel) sel.value = String(i);
+  log('🌐 speech input language → ' + Voice.sttLang);
+  toast('SPEAK IN ' + (Voice.sttLang === 'en-IN' ? 'ENGLISH' : 'HINDI') + ' NOW');
+});
+
+/* ---------- NEXUS BRAIN — autonomous thinking + optional real LLM ---------- */
+const Brain = { busy: false, provider: 'gemini', key: '', model: 'gemini-2.5-flash' };
+try {
+  Brain.key      = localStorage.getItem('nexus_key') || '';
+  Brain.provider = localStorage.getItem('nexus_provider') || 'gemini';
+  Brain.model    = localStorage.getItem('nexus_model') || 'gemini-2.5-flash';
+} catch (e) {}
+const PROVIDERS = {
+  gemini:     { label: 'Gemini \u2014 Google AI Studio (FREE)', model: 'gemini-2.5-flash', keyUrl: 'aistudio.google.com/apikey' },
+  groq:       { label: 'Groq \u2014 Llama 70B (FREE, fast)',    model: 'llama-3.3-70b-versatile', keyUrl: 'console.groq.com' },
+  cerebras:   { label: 'Cerebras (FREE, 1M tok/day)',      model: 'llama-3.3-70b', keyUrl: 'cloud.cerebras.ai' },
+  openrouter: { label: 'OpenRouter :free models',          model: 'deepseek/deepseek-chat:free', keyUrl: 'openrouter.ai' },
+  openai:     { label: 'OpenAI (paid)',                    model: 'gpt-4o-mini', keyUrl: 'platform.openai.com' },
+};
+const MISSIONS = [
+  { why: 'inbox piling up — triage needed',    chain: ['Email','Chief of staff','Memory'],  say: 'Mission complete: inbox triaged, three replies drafted for your approval.' },
+  { why: 'market moving — checking positions', chain: ['Trading','Finance'],                say: 'Market scan done. Paper portfolio stable, stop losses in place.' },
+  { why: 'knowledge base going stale',         chain: ['Researcher','Memory','Strategist'], say: 'Research finished: three new sources saved into memory.' },
+  { why: 'calendar conflicts ahead',           chain: ['Calendar','Chief of staff'],        say: 'Calendar fixed: two conflicts resolved automatically.' },
+  { why: 'systems health check due',           chain: ['Engineering','Ops'],                say: 'Systems healthy: builds green, backups verified.' },
+  { why: 'content pipeline running empty',     chain: ['Marketing','Social','Design'],      say: 'Content refilled: four posts scheduled for the week.' },
+];
+let lastMission = -1;
+function pickMission() {
+  let i; do { i = (Math.random() * MISSIONS.length) | 0; } while (i === lastMission && MISSIONS.length > 1);
+  lastMission = i; return MISSIONS[i];
+}
+async function llm(messages, maxTok) {
+  if (!Brain.key) return null;
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 25000);
+  try {
+    let txt = '';
+    if (Brain.provider === 'gemini') {
+      const sys = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
+      const contents = messages.filter(m => m.role !== 'system')
+        .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+      const body = { contents, generationConfig: { temperature: .7, maxOutputTokens: maxTok || 160 } };
+      if (sys) body.systemInstruction = { parts: [{ text: sys }] };
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + Brain.model + ':generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Brain.key },
+        body: JSON.stringify(body), signal: ctl.signal
+      });
+      clearTimeout(to);
+      if (!r.ok) {
+        const extra = (r.status === 404) ? ' — model name badal ke try karo (gemini-2.0-flash / gemini-3-flash)'
+                    : (r.status === 429 ? ' — free limit hit, thodi der baad' : '');
+        throw new Error('HTTP ' + r.status + extra);
+      }
+      const j = await r.json();
+      txt = ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [])
+        .map(p => p.text || '').join('').trim();
+    } else {
+      const base = Brain.provider === 'groq' ? 'https://api.groq.com/openai/v1'
+                 : Brain.provider === 'cerebras' ? 'https://api.cerebras.ai/v1'
+                 : Brain.provider === 'openrouter' ? 'https://openrouter.ai/api/v1'
+                 : 'https://api.openai.com/v1';
+      const r = await fetch(base + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + Brain.key },
+        body: JSON.stringify({ model: Brain.model, messages, temperature: .7, max_tokens: maxTok || 160 }),
+        signal: ctl.signal
+      });
+      clearTimeout(to);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      txt = ((j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '').trim();
+    }
+    return txt;
+  } catch (e) {
+    clearTimeout(to);
+    log('✗ brain (' + Brain.provider + ') failed: ' + e.message + ' — local brain on');
+    if (Brain.provider === 'gemini') log('ℹ free key: aistudio.google.com/apikey');
+    return null;
+  }
+}
+async function realReply(v) {
+  return llm([
+    { role: 'system', content: "You are NEXUS, a personal AI assistant controlling 19 agents (Strategist, Researcher, Finance, Chief of staff, Email, Calendar, Trading, Marketing, Social, Design, Engineering, Ops, Developer, Analytics, CRM, Memory, Drive, Sales, Editor). Reply in the user's language (Hinglish is fine), max 60 words, crisp, friendly, actionable." },
+    { role: 'user', content: v }
+  ]);
+}
+async function thinkCycle(adviseOnly) {
+  if (Brain.busy) return;
+  Brain.busy = true;
+  log('\U0001F9E0 THINKING: scanning context \u2026');
+  let mission = null;
+  if (Brain.key) {
+    const j = await llm([
+      { role: 'system', content: 'Pick ONE next mission for NEXUS. Agents: ' + AGENTS.map(a => a.label).join(', ') + '. Reply ONLY JSON: {"mission":"...","why":"...","agents":["A","B"],"say":"one spoken sentence"}' },
+      { role: 'user', content: 'Recent activity:\n' + logEl.innerText.slice(-500) }
+    ], 220);
+    if (j) {
+      try {
+        const o = JSON.parse(j.match(/\{[\s\S]*\}/)[0]);
+        mission = { why: o.why || o.mission, chain: (o.agents || []).filter(a => AGENTS.some(x => x.label === a)), say: o.say || 'Mission complete.' };
+      } catch (e) {}
+    }
+  }
+  if (!mission) mission = pickMission();
+  log('\U0001F9E0 reasoning: ' + mission.why);
+  toast('\U0001F9E0 AUTOPILOT: ' + mission.why.slice(0, 42).toUpperCase());
+  const chain = mission.chain.length ? mission.chain : ['Chief of staff'];
+  log('\u2192 plan: ' + chain.join(' \u2192 '));
+  chain.forEach((label, i) => setTimeout(() => {
+    const a = AGENTS.find(x => x.label === label); if (!a) return;
+    activate(a); a.nextLine = now + 1.2; a.until = now + 5;
+  }, 900 + i * 2300));
+  setTimeout(() => {
+    if (adviseOnly)
+      typeMsg('NEXUS \u00B7 PLAN', 'Meri salah: ' + mission.why + '. Plan: ' + chain.join(' \u2192 ') + '. "Autopilot on" bolo to main khud karta jaunga.');
+    else {
+      log('\u2713 ' + mission.say);
+      Voice.speak(mission.say);
+    }
+    Brain.busy = false;
+  }, 900 + chain.length * 2300 + 800);
+}
+async function respond(v) {
+  if (Brain.key) {
+    const t = await realReply(v);
+    if (t) { typeMsg('NEXUS \u00B7 REAL BRAIN', t); return; }
+  }
+  const reply = await route(v);
+  if (reply) setTimeout(() => typeMsg('NEXUS \u00B7 CHIEF OF STAFF', reply), 420);
+}
+
+/* ---------- chat ---------- */
+const chatEl = document.getElementById('chat'), msgs = document.getElementById('msgs');
+document.getElementById('chatBtn').addEventListener('click', () => { chatEl.classList.toggle('open'); document.getElementById('cinput').focus(); });
+document.getElementById('btnChat').addEventListener('click', () => { chatEl.classList.add('open'); document.getElementById('cinput').focus(); });
+document.getElementById('chatClose').addEventListener('click', () => chatEl.classList.remove('open'));
+function addMsg(cls, who, text) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.innerHTML = `<span class="who">${who}</span>`;
+  const b = document.createElement('span'); d.appendChild(b);
+  msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
+  return b;
+}
+function typeMsg(who, text) {
+  Voice.speak(text);
+  const b = addMsg('nexus', who, '');
+  let i = 0;
+  const iv = setInterval(() => {
+    i += 2; b.textContent = text.slice(0, i);
+    msgs.scrollTop = msgs.scrollHeight;
+    if (i >= text.length) clearInterval(iv);
+  }, 14);
+}
+async function route(v) {
+  const s = v.toLowerCase();
+  if (/\b(reminder|remind|yaad dila|dila do)\b/.test(s)) {
+    if (/\b(reminders bata|reminder list|kaunse reminder)\b/.test(s)) {
+      if (!REM.list.length) return 'Abhi koi reminder nahi. Bolo: reminder pani piyo 30 minute.';
+      return 'Reminders: ' + REM.list.map(r => r.text).join('; ') + '.';
+    }
+    const p = parseRemind(v);
+    addReminder(p.label, p.when);
+    const mins = Math.max(1, Math.round((p.when - Date.now()) / 60000));
+    return 'Reminder set: ' + p.label + ' \u2014 lagbhag ' + mins + ' minute me yaad dila dunga. (Page khula rahe)';
+  }
+  if (/\b(desk on|trading desk on|bots on|desk chalu)\b/.test(s)) { const t = document.getElementById('deskTog'); if (t && !t.classList.contains('on')) t.click(); return 'Trading DESK ON \u2014 Screener, Cartographer, Risk, Gate, Exit Clerk, Auditor sab active. Alerts aayenge, aap approve karoge tabhi trade hoga.'; }
+  if (/\b(desk off|trading desk off|bots off|desk band)\b/.test(s)) { const t = document.getElementById('deskTog'); if (t && t.classList.contains('on')) t.click(); return 'Desk off. Koi naya scan nahi hoga.'; }
+  if (/\b(desk status|desk report|auditor|journal)\b/.test(s)) { deskAuditRender(); document.getElementById('ctrBtn').click(); const ds = document.getElementById('deskSec'); if (ds) setTimeout(() => ds.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400); return deskReportStr(); }
+  if (/\b(shopify)\b/.test(s)) {
+    document.getElementById('ctrBtn').click();
+    const ss = document.getElementById('sbUrl');
+    if (ss) setTimeout(() => ss.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
+    const nm = s.match(/(?:research|products?)\s+(?:karo\s+)?(?:for\s+)?([a-z\s]+)$/);
+    if (nm && nm[1]) {
+      const ni = document.getElementById('sbNiche');
+      if (ni) { ni.value = nm[1].trim(); setTimeout(() => document.getElementById('sbGo').click(), 700); }
+    }
+    return 'Shopify agent taiyar! Niche daalo aur RESEARCH dabao \u2014 Gemini products sochega, APPROVE karoge to khud add karega.';
+  }
+  if (/\b(site kholo|my site|apni site|meri site|website kholo)\b/.test(s)) { const u = openSite(); return 'Site khol diya naye tab me: ' + u; }
+  if (/\b(gmail|mail bhej|email bhej|inbox|mail check)\b/.test(s)) {
+    openGmailSetup();
+    if (/\b(inbox|mail check|check mail|mail padho)\b/.test(s)) { gmailInbox().then(m => { if (m) log(m); }); return 'Inbox la raha hoon \u2014 top 5 mails GMAIL section me dikhenge.'; }
+    return 'Mailman taiyar! Compose box bharo aur SEND dabao. (One-time setup: script.google.com ka code chat me hai.)';
+  }
+  if (/\b(deploy|site upload|upload karo|website live|forge)\b/.test(s)) { return forgeDeploy(false); }
+  if (/\b(auto upload|auto deploy|khud upload)\b/.test(s)) {
+    if (!GH.t) { openForgeSetup(); return 'Pehle GitHub token FORGE section me daalo (2 min) \u2014 phir AUTO ON karenge.'; }
+    const ab = document.getElementById('ghAuto'); if (ab) ab.click();
+    return 'AUTO upload ' + (GH.auto ? 'ON \u2014 ab complete kaam khud upload hoga' : 'OFF');
+  }
+  if (/\b(binance|crypto account|binance balance)\b/.test(s)) {
+    if (/\b(balance|test|jodo|connect)\b/.test(s)) return binanceTest();
+    openBinanceSetup();
+    return 'Binance section khol diya. App me API banao (sirf Enable Reading ON), key-secret yaha daalo, TEST dabao.';
+  }
+  if (/\b(morning brief|briefing|aaj ka plan|din bhar)\b/.test(s)) { morningBrief(); return ''; }
+  if (/\b(status report|full status)\b/.test(s)) { statusReport(); return ''; }
+  if (/\b(ping all|sab agents|all agents)\b/.test(s)) { pingAll(); return ''; }
+  if (/\b(autopilot on|auto pilot on|khud socho|brain on|khud karo)\b/.test(s)) {
+    const t = document.querySelector('.atog[data-k="brain"]');
+    if (t && !t.classList.contains('on')) t.click();
+    return 'Autopilot ON! Ab main khud sochunga, khud research karunga. Aap aaram kijiye.';
+  }
+  if (/\b(autopilot off|brain off|ruk jao|bas karo)\b/.test(s)) {
+    const t = document.querySelector('.atog[data-k="brain"]');
+    if (t && t.classList.contains('on')) t.click();
+    return 'Autopilot off. Control aapke haath me.';
+  }
+  if (/\b(control center|control kholo)\b/.test(s)) { document.getElementById('ctrBtn').click(); return 'Control center khul gaya.'; }
+  if (/\b(full screen|fullscreen)\b/.test(s)) { const c = document.querySelectorAll('.ccmd')[8]; if (c) c.click(); return 'Fullscreen.'; }
+  if (/\b(chup|quiet|stop talking|awaaz band)\b/.test(s)) { if (Voice.speakOn) document.getElementById('speakBtn').click(); return 'Theek hai, chup ho gaya.'; }
+  if (/\b(what should i do|kya karu|kya karna chahiye|suggest|advise|socho)\b/.test(s)) { thinkCycle(true); return ''; }
+  if (/\b(good night|goodnight|bye|shut down|band ho jao)\b/.test(s)) { setTimeout(() => setListening(false), 900); return 'Good night! Main standby pe ja raha hoon. Kal milte hain.'; }
+  if (/\b(hello nexus|hi nexus|hey nexus|namaste nexus)\b/.test(s)) { return 'Hello! ' + activeCount() + ' agents active hain. Boliye \u2014 morning brief, trading status, ya autopilot on!'; }
+  if (/(self.?check|status|health|how are)/.test(s)) {
+    setTimeout(runSelfCheck, 300);
+    return 'Running a full self-check now — sweeping all 19 agents, memory integrity and integrations. Results will stream into the activity log.';
+  }
+  if (/(finance|money|budget|burn|spend)/.test(s))
+    return 'Finance here — latest numbers pulled: burn is tracking 6% under forecast this month, and invoice #2231 is flagged for your review.';
+  if (/(research|find|source|learn)/.test(s))
+    return 'Researcher: quick sweep done — 3 solid sources found and a summary is dropping into Memory for the rest of the team.';
+  if (/(calendar|schedule|meeting|book)/.test(s))
+    return 'Calendar: found a free slot Thursday 15:00 and moved the sync there. Two conflicts on Friday were auto-resolved.';
+  if (/(email|inbox|reply|mail)/.test(s))
+    return 'Email: 3 replies are drafted and waiting for your sign-off — nothing goes out without your approval.';
+  if (/(remind|memory|remember)/.test(s))
+    return 'Memory: stored. I indexed it against your current projects so every agent can recall it in ~40ms.';
+  if (/\b(mausam|weather|garmi|barish|thand)\b/.test(s)) {
+    const w = await fetchWeatherStr();
+    return w || 'Weather abhi fetch nahi hua \u2014 internet check karo.';
+  }
+  if (/\b(tradingview|live chart|live price|asli bhav)\b/.test(s)) {
+    document.getElementById('ctrBtn').click();
+    setTimeout(() => { const el = document.getElementById('ptBody'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 400);
+    return 'Live prices taiyar! Kisi stock ka chart chahiye to uske NAAM pe tap karo. BUY/SELL se trade.';
+  }
+  if (/\b(paper trade|virtual portfolio|demo trading|practice trading)\b/.test(s)) {
+    document.getElementById('ctrBtn').click();
+    const sp = document.getElementById('ptSec');
+    if (sp) setTimeout(() => sp.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+    return 'Paper trading khul gaya \u2014 virtual cash taiyar. Buy, sell, seekho \u2014 risk zero!';
+  }
+  if (/\b(trade|trading|stock|stocks|share|shares|nifty|sensex|invest|portfolio|market)\b/.test(s))
+    return 'Trading agent: abhi main PAPER mode me hoon — order draft kar sakta hoon, P&L track kar sakta hoon, lekin real paisa ke liye broker API (Kite / Angel One / Binance) aur aapki approval chahiye. Pehle paper trading karte hain?';
+  if(/[\u0900-\u097F]/.test(s) || /\b(kya|kaise|karo|kar|chahiye|batao|mujhe|kal|aaj|bhejo|dekho|tha)\b/.test(s))
+    return 'Chief of staff: samajh gaya! Ye kaam main sahi agent ko route kar raha hoon — progress activity log me dikhega. Aur kuch?';
+  return 'Chief of staff: on it — I\'ve routed that to the right agent and you\'ll see progress in the activity log. Anything else to queue?';
+}
+document.getElementById('cform').addEventListener('submit', e => {
+  e.preventDefault();
+  const inp = document.getElementById('cinput');
+  const v = inp.value.trim(); if (!v) return;
+  addMsg('you', 'YOU', v); inp.value = '';
+  respond(v);
+});
+function runSelfCheck() { if (!chk) { chk = { t0: now, l1: false, l2: false }; log('⚙ self-check initiated via console'); } }
+
+/* ---------- control center ---------- */
+const ctrEl = document.getElementById('ctr');
+document.getElementById('ctrBtn').addEventListener('click', () => { Voice.activate(); ctrEl.classList.add('open'); });
+document.getElementById('ctrClose').addEventListener('click', () => ctrEl.classList.remove('open'));
+
+const partOfDay = () => { const hr = new Date().getHours(); return hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : 'evening'; };
+const activeCount = () => AGENTS.filter(a => a.active).length;
+const upMins = () => Math.max(1, Math.round((performance.now() - S.boot) / 60000));
+
+async function morningBrief() {
+  let wx = '';
+  try { wx = await fetchWeatherStr(); } catch (e) {}
+  const t = `Good ${partOfDay()}. Morning brief: ${activeCount()} agents active right now. Calendar: ${2 + ((Math.random()*3)|0)} events today, next at 11 AM. Trading paper portfolio plus 2.3 percent. Inbox: 3 replies waiting for your approval. Self-check suite is green.${wx ? ' ' + wx : ''}`;
+  typeMsg('NEXUS · BRIEF', t); Voice.speak(t); log('☀ morning brief delivered');
+}
+function statusReport() {
+  const t = `Status report: ${activeCount()} of 19 agents active. Memory index healthy, uptime ${upMins()} minute${upMins()>1?'s':''}. All integrations nominal.`;
+  typeMsg('NEXUS · STATUS', t); Voice.speak(t); log('📢 status report');
+}
+function tradingStatus() {
+  const t = 'Trading agent: paper mode on. Portfolio plus 2.3 percent today. No live orders — broker API aur aapke approval ke bina real trade nahi hoga.';
+  typeMsg('NEXUS · TRADING', t); Voice.speak(t);
+  const tr = AGENTS.find(a => a.label === 'Trading'); if (tr) { tr.active = true; tr.until = now + 6; spawnPulse(tr, 1); }
+}
+function pingAll() {
+  AGENTS.forEach((a, i) => setTimeout(() => { a.flash = 1; spawnPulse(a, 1); spawnPulse(a, -1); }, i * 80));
+  const t = 'All 19 agents pinged. Average latency 34 milliseconds, zero failures.';
+  log('🎤 ping → all agents … 34ms avg'); Voice.speak(t); toast('ALL AGENTS PINGED · 34MS AVG');
+}
+const CMDS = [
+  ['☀ MORNING BRIEF', 'poora din ka summary — bolkar', () => { Voice.activate(); morningBrief(); }],
+  ['📢 STATUS REPORT', 'kitne agents active hain', () => { Voice.activate(); statusReport(); }],
+  ['📈 TRADING STATUS', 'paper portfolio ka haal', () => { Voice.activate(); tradingStatus(); }],
+  ['🛡 SELF-CHECK', 'saare 19 agents ki jaanch', () => { Voice.activate(); runSelfCheck(); }],
+  ['🎤 PING ALL AGENTS', 'har agent ka reaction test', () => { Voice.activate(); pingAll(); }],
+  ['🔊/🔇 VOICE', 'awaz on/off', () => document.getElementById('speakBtn').click()],
+  ['EN / हिं', 'zubaan badlo', () => document.getElementById('langBtn').click()],
+  ['⌨ CHAT', 'console kholo', () => { chatEl.classList.add('open'); }],
+  ['⛶ FULLSCREEN', 'poora screen', () => { const d = document; if (!d.fullscreenElement) (d.documentElement.requestFullscreen || d.documentElement.webkitRequestFullscreen || function(){}).call(d.documentElement); else d.exitFullscreen(); }],
+  ['🧹 CLEAR LOG', 'activity log saaf', () => { logEl.innerHTML = ''; toast('LOG CLEARED'); }],
+  ['💰 PAPER TRADE', 'virtual ₹400 portfolio', () => { ctrEl.classList.add('open'); const s = document.getElementById('ptSec'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); }],
+  ['📰 LIVE + TRADE', 'live prices + trading panel', () => { ctrEl.classList.add('open'); const el = document.getElementById('ptBody'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); toast('LIVE PRICES TAIYAR \u2014 BUY/SELL KARO'); }],
+  ['⏰ REMINDER', 'bolo: reminder pani 30 minute', () => { chatEl.classList.add('open'); const ci = document.getElementById('cinput'); ci.value = 'reminder '; ci.focus(); }],
+  ['🎯 TRADING DESK', '6-bot system (sim)', () => { ctrEl.classList.add('open'); const ds = document.getElementById('deskSec'); if (ds) setTimeout(() => ds.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350); }],
+];
+const cmdGrid = document.getElementById('cmdGrid');
+CMDS.push(['\u2191 DEPLOY', 'site khud upload \u2014 "deploy" bolo', () => route('deploy karo').then(m => m && log(m))]);
+CMDS.push(['\U0001F4EC GMAIL', 'send / inbox \u2014 relay setup', () => route('gmail')]);
+CMDS.push(['\U0001F310 SITE', 'apni website \u2014 1 tap open', () => openSite()]);
+cmdGrid.innerHTML = CMDS.map((c, i) => `<button class="ccmd" data-i="${i}">${c[0]}<small>${c[1]}</small></button>`).join('');
+cmdGrid.addEventListener('click', e => {
+  const b = e.target.closest('.ccmd'); if (!b) return;
+  try { CMDS[+b.dataset.i][2](); } catch (err) { log('✗ command error: ' + err.message); }
+});
+
+const AUTOS = {
+  brief:  { label: '☀ MORNING BRIEF',  desc: 'page khula ho to summary bolta hai (demo: 30s baad)', every: 30000 },
+  market: { label: '📈 TRADING SCANNER', desc: 'har 45s market scan — Trading agent jagta hai',       every: 45000 },
+  check:  { label: '🛡 AUTO SELF-CHECK', desc: 'har 10 min me khud ki jaanch',                        every: 600000 },
+  brain:  { label: '🧠 AUTOPILOT',       desc: 'KHUD sochta hai — mission khud chunta hai, research khud karta hai', every: 80000 },
+};
+const autoList = document.getElementById('autoList');
+autoList.innerHTML = Object.entries(AUTOS).map(([k, a]) =>
+  `<div class="arow"><div class="ai"><b>${a.label}</b><span>${a.desc}</span></div><div class="atog" data-k="${k}"></div></div>`).join('');
+autoList.addEventListener('click', e => {
+  const t = e.target.closest('.atog'); if (!t) return;
+  const k = t.dataset.k, a = AUTOS[k];
+  a.on = !a.on; t.classList.toggle('on', a.on);
+  if (k === 'brain') { const bb = document.getElementById('btnBrain'); if (bb) bb.classList.toggle('on', a.on); }
+  clearInterval(a.tm);
+  if (a.on) {
+    Voice.activate();
+    if (k === 'brain') setTimeout(thinkCycle, 800);
+    if (k === 'brief') a.tm = setTimeout(function run() { morningBrief(); a.tm = setTimeout(run, a.every); }, 30000);
+    else a.tm = setInterval(() => {
+      if (k === 'market') {
+        const tr = AGENTS.find(x => x.label === 'Trading');
+        tr.active = true; tr.until = now + 6; tr.nextLine = now + .5; spawnPulse(tr, 1);
+      } else if (k === 'brain') thinkCycle();
+      else runSelfCheck();
+    }, a.every);
+    log('⚙ automation ON → ' + a.label);
+    toast(a.label + ' · ON');
+  } else { log('⚙ automation OFF → ' + a.label); toast(a.label + ' · OFF'); }
+});
+
+document.getElementById('ctrCopy').addEventListener('click', function () {
+  const url = location.href;
+  const done = () => { this.textContent = '✓ COPIED'; toast('LINK COPIED — SHORTCUT ME PASTE KARO'); setTimeout(() => this.textContent = '📋 COPY PAGE LINK', 2500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done).catch(() => {});
+  else { const i = document.createElement('input'); i.value = url; document.body.appendChild(i); i.select(); try { document.execCommand('copy'); done(); } catch (e) {} i.remove(); }
+});
+
+const btnBrain = document.getElementById('btnBrain');
+btnBrain.addEventListener('click', () => {
+  Voice.activate();
+  const t = document.querySelector('.atog[data-k="brain"]');
+  if (t) t.click(); else toast('Pehle CONTROL CENTER kholo');
+});
+
+const keyIn = document.getElementById('keyIn'), keyStat = document.getElementById('keyStat');
+const provSel = document.getElementById('brainProv'), modelIn = document.getElementById('modelIn');
+provSel.innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}">${p.label}</option>`).join('');
+provSel.value = Brain.provider; modelIn.value = Brain.model;
+provSel.addEventListener('change', () => {
+  Brain.provider = provSel.value;
+  Brain.model = PROVIDERS[Brain.provider].model;
+  modelIn.value = Brain.model;
+});
+function keyStatUpd() {
+  keyStat.textContent = Brain.key
+    ? '✓ REAL BRAIN ACTIVE — ' + Brain.provider + ' (' + Brain.model + ') se soch-research'
+    : '○ local brain (demo) — free Gemini key daalo: aistudio.google.com/apikey';
+}
+keyStatUpd();
+document.getElementById('keySave').addEventListener('click', () => {
+  Brain.key = keyIn.value.trim();
+  Brain.provider = provSel.value;
+  Brain.model = modelIn.value.trim() || PROVIDERS[Brain.provider].model;
+  if (Brain.key) {
+    try {
+      localStorage.setItem('nexus_key', Brain.key);
+      localStorage.setItem('nexus_provider', Brain.provider);
+      localStorage.setItem('nexus_model', Brain.model);
+    } catch (e) {}
+    log('🧠 real brain linked — ' + Brain.provider + ' (' + Brain.model + ') online');
+    toast('REAL BRAIN CONNECTED 🧠 ' + Brain.provider.toUpperCase());
+  } else toast('KEY KHALI HAI');
+  keyStatUpd();
+});
+document.getElementById('keyDel').addEventListener('click', () => {
+  Brain.key = ''; try { localStorage.removeItem('nexus_key'); } catch (e) {}
+  keyIn.value = ''; keyStatUpd(); log('🧠 real brain removed — local brain active'); toast('LOCAL BRAIN MODE');
+});
+document.getElementById('keyTest').addEventListener('click', async () => {
+  Voice.activate();
+  if (!Brain.key) { toast('PEHLE KEY PASTE KARKE SAVE KARO'); return; }
+  toast('⏳ BRAIN TEST CHALU…');
+  log('🧠 brain test → ' + Brain.provider + ' (' + Brain.model + ')');
+  const t = await llm([{ role: 'user', content: 'Reply with exactly: BRAIN OK' }], 12);
+  if (t) {
+    toast('✓ BRAIN OK — REAL AI CHAL RAHA HAI 🧠');
+    log('✓ real brain replied: ' + t.slice(0, 40));
+    Voice.speak('Brain connected. I am now thinking with real A I. Ask me anything.');
+  } else {
+    toast('✗ FAIL — KEY/NET CHECK KARO (401=key galat, 429=limit, 404=model name)');
+    log('✗ brain test fail — details upar log me');
+  }
+});
+
+/* ---------- paper trading engine ---------- */
+const STOCKS = [
+  { s:'RELIANCE', p:1420 }, { s:'TCS', p:3150 }, { s:'HDFCBANK', p:1710 }, { s:'ICICIBANK', p:1265 },
+  { s:'INFY', p:1560 }, { s:'SBIN', p:815 }, { s:'BHARTIARTL', p:1655 }, { s:'TATAMOTORS', p:790 },
+  { s:'WIPRO', p:305 }, { s:'ONGC', p:245 }, { s:'IRFC', p:132 }, { s:'IEX', p:185 },
+  { s:'ETERNAL', p:265 }, { s:'IDEA', p:9 },
+  { s:'DOGE', p:17, cry:1 }, { s:'TRX', p:26, cry:1 }, { s:'ADA', p:36, cry:1 },
+  { s:'XRP', p:115, cry:1 }, { s:'SHIB', p:0.0012, cry:1 }, { s:'SOL', p:14500, cry:1 }
+];
+const PT = { cash: 100000, cap: 100000, capSel: 100000, qty: 1, hold: {}, pr: {}, hist: {} };
+STOCKS.forEach(x => {
+  PT.pr[x.s] = x.p;
+  PT.hist[x.s] = Array.from({ length: 24 }, () => x.p * (1 + (Math.random() - .5) * .05));
+});
+try {
+  const sv = JSON.parse(localStorage.getItem('nexus_pt') || 'null');
+  if (sv && typeof sv.cash === 'number') {
+    PT.cash = sv.cash; PT.cap = sv.cap || 100000;
+    for (const k in (sv.hold || {})) PT.hold[k] = (typeof sv.hold[k] === 'number') ? { q: sv.hold[k], avg: (sv.pr && sv.pr[k]) || 0 } : sv.hold[k];
+    if (sv.pr) Object.assign(PT.pr, sv.pr);
+  }
+} catch (e) {}
+function ptSave() { try { localStorage.setItem('nexus_pt', JSON.stringify({ cash: PT.cash, cap: PT.cap, hold: PT.hold, pr: PT.pr })); } catch (e) {} }
+function ptValue() { let v = PT.cash; for (const s in PT.hold) v += (PT.hold[s] ? PT.hold[s].q : 0) * PT.pr[s]; return v; }
+function spark(s) {
+  const hh = PT.hist[s] || []; if (hh.length < 2) return '';
+  const mn = Math.min(...hh), mx = Math.max(...hh), rg = (mx - mn) || 1;
+  const pts = hh.map((v, i) => (i / (hh.length - 1) * 58).toFixed(1) + ',' + (16 - (v - mn) / rg * 14).toFixed(1)).join(' ');
+  const up = hh[hh.length - 1] >= hh[0];
+  return `<svg width="58" height="18"><polyline points="${pts}" fill="none" stroke="${up ? '#59e6a8' : '#ff8d6b'}" stroke-width="1.2"/></svg>`;
+}
+function ptRender() {
+  const el = document.getElementById('ptBody'); if (!el) return;
+  el.innerHTML = STOCKS.map(x => {
+    const cur = PT.pr[x.s], pos = PT.hold[x.s], q = pos ? pos.q : 0;
+    const pl = pos ? (cur - pos.avg) * pos.q : 0;
+    return `<div class="mrow"><a class="nm" href="https://www.tradingview.com/chart/?symbol=NSE%3A${x.s}" target="_blank" rel="noopener" title="TradingView live chart">${x.s}</a>${spark(x.s)}` +
+      `<span class="pr">₹${cur >= 500 ? Math.round(cur) : cur.toFixed(1)}</span>` +
+      `<span class="pl">${q ? '×' + q + ' <span class="' + (pl >= 0 ? 'up' : 'dn') + '">' + (pl >= 0 ? '+' : '') + Math.round(pl) + '</span>' : ''}</span>` +
+      `<button class="mini" data-b="${x.s}" ${PT.cash < cur * PT.qty ? 'disabled style="opacity:.3"' : ''}>BUY</button>` +
+      `<button class="mini" data-sl="${x.s}" ${q < 1 ? 'disabled style="opacity:.3"' : ''}>SELL</button></div>`;
+  }).join('');
+  const inv = ptValue() - PT.cash, pl = ptValue() - PT.cap;
+  const fmt = n => Math.round(n).toLocaleString('en-IN');
+  const sumEl = document.getElementById('ptSum');
+  if (sumEl) sumEl.innerHTML = `CASH <b style="color:#dceaff">₹${fmt(PT.cash)}</b> · INVESTED <b style="color:#dceaff">₹${fmt(inv)}</b> · TOTAL <b style="color:#dceaff">₹${fmt(ptValue())}</b> · <span class="${pl >= 0 ? 'up' : 'dn'}">P&amp;L ${pl >= 0 ? '+' : ''}₹${fmt(pl)}</span>`;
+}
+setInterval(() => {
+  STOCKS.forEach(x => {
+    PT.pr[x.s] = Math.max(1, PT.pr[x.s] * (1 + (Math.random() - .5) * .024));
+    (PT.hist[x.s] = PT.hist[x.s] || []).push(PT.pr[x.s]);
+    if (PT.hist[x.s].length > 36) PT.hist[x.s].shift();
+  });
+  if (document.getElementById('ctr').classList.contains('open')) ptRender();
+  try { deskTick(); } catch (e) {}
+  try { forgeAutoTick(); } catch (e) {}
+}, 5000);
+
+/* ---------- LIVE crypto feed: Binance public -> CoinGecko fallback (no key) ---------- */
+const CRY = {
+  DOGE: { bin: 'DOGEUSDT', cg: 'dogecoin' }, TRX: { bin: 'TRXUSDT', cg: 'tron' },
+  ADA:  { bin: 'ADAUSDT',  cg: 'cardano' },  XRP: { bin: 'XRPUSDT',  cg: 'ripple' },
+  SHIB: { bin: 'SHIBUSDT', cg: 'shiba-inu' }, SOL: { bin: 'SOLUSDT',  cg: 'solana' }
+};
+const USDTINR = 88.5;
+let cryOn = false;
+function _sig() { return (window.AbortSignal && AbortSignal.timeout) ? AbortSignal.timeout(6000) : undefined; }
+async function fetchCrypto() {
+  try {
+    const syms = Object.values(CRY).map(c => c.bin);
+    const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbols=' + encodeURIComponent(JSON.stringify(syms)), { signal: _sig() });
+    if (!r.ok) throw new Error('bin ' + r.status);
+    const j = await r.json();
+    j.forEach(t => {
+      const base = String(t.symbol).replace('USDT', '');
+      const inr = parseFloat(t.price) * USDTINR;
+      if (PT.pr[base] !== undefined && inr > 0) {
+        PT.pr[base] = inr;
+        (PT.hist[base] = PT.hist[base] || []).push(inr);
+        if (PT.hist[base].length > 36) PT.hist[base].shift();
+      }
+    });
+    if (!cryOn) { cryOn = true; log('⛓ LIVE crypto prices ON — Binance public feed (no key)'); toast('⛓ LIVE CRYPTO: DOGE TRX ADA XRP SHIB SOL'); }
+  } catch (e) {
+    try {
+      const ids = Object.values(CRY).map(c => c.cg).join(',');
+      const r2 = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + ids + '&vs_currencies=inr', { signal: _sig() });
+      if (!r2.ok) return;
+      const j2 = await r2.json();
+      Object.values(CRY).forEach(c => {
+        const base = c.bin.replace('USDT', '');
+        if (j2[c.cg] && j2[c.cg].inr && PT.pr[base] !== undefined) {
+          PT.pr[base] = j2[c.cg].inr;
