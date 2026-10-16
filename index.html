@@ -524,3 +524,318 @@
         <button class="mini" id="ghAuto">AUTO: OFF</button>
         <button class="mini" id="ghSite" style="border-color:rgba(79,216,255,.55);color:#4fd8ff">🌐 SITE KHOLDO</button>
       </div>
+           <div id="ghStat" style="margin-top:6px;font-size:9px;color:var(--dim)">○ token nahi — setup karo (2 min, free)</div>
+    </div>
+    <div class="csec" id="bnSec">⛣ BINANCE CONNECT — API (READ-ONLY)</div>
+    <div class="siri">
+      Binance app → Profile → <b>API Management</b> → Create API → System generated → naam: NEXUS-DESK → restrictions me sirf <b>Enable Reading ON</b> → Create API (System generated) → naam: NEXUS-DESK → restrictions: <b>Enable Reading ✓</b>, Spot Trading ✗, <b>Withdrawals ✗</b>. Key + secret yaha daalo (sirf phone me save hoga).
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <input id="bnKey" placeholder="API key" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none">
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input id="bnSec" type="password" placeholder="API secret (kisi ko na do)" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none">
+        <button class="mini" id="bnSave">SAVE</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="mini" id="bnTest">⚡ TEST / BALANCE</button>
+      </div>
+      <div id="bnStat" style="margin-top:6px;font-size:9px;color:var(--dim)">○ key nahi — upar app me banao (3 min, free)</div>
+      <div id="bnOut" style="margin-top:4px;font-size:9px;line-height:1.7;color:var(--dim)"></div>
+      <div style="margin-top:6px;font-size:8.5px;color:var(--gold)">ⓘ ORDERS abhi bhi SIM (paper) me — asli order backend + practice ke baad, safety first</div>
+    </div>
+    <div class="csec">🔐 ACCOUNTS — REAL TRADING (SACH)</div>
+    <div class="siri">
+      Asli broker (Angel One SmartAPI — free) tab jab 1–2 mahine PAPER practice complete. Gmail upar GMAIL section me jud chuka hai (relay se).
+    </div>
+  </div>
+</aside>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ================================================================
+   NEXUS — a self-contained recreation of the “AI assistant command
+   deck” UI: central orb, agent network, live log, waveform, chat.
+   ================================================================ */
+/* ================= PRO PAGE ROUTER ================= */
+const VIEWS = ['home','trade','gmail','shopify','forge','binance','editor','brain'];
+function go(v) {
+  if (!VIEWS.includes(v)) v = 'home';
+  document.querySelectorAll('.view').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('#topbar .tb').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  if (v !== 'home') document.getElementById('v-' + v).classList.add('active');
+  document.getElementById('ctr').classList.remove('open');
+  try { history.replaceState(null, '', '#' + v); } catch (e) {}
+  if (v === 'trade') { drawMini(); renderPos(); }
+  if (v === 'forge') { const b = document.getElementById('siteUrlBox'); if (b) b.textContent = siteUrl(); }
+  return v;
+}
+document.getElementById('topbar').addEventListener('click', e => {
+  const b = e.target.closest('.tb'); if (b) go(b.dataset.v);
+});
+function moveSec(idOrText, targetId, hide) {
+  const el = idOrText.startsWith('#') ? document.getElementById(idOrText.slice(1))
+    : [...document.querySelectorAll('.csec')].find(e => e.textContent.includes(idOrText));
+  if (!el) return false;
+  const siri = el.nextElementSibling;
+  const t = document.getElementById(targetId);
+  t.appendChild(el);
+  if (siri && siri.classList.contains('siri')) t.appendChild(siri);
+  if (hide && siri) siri.style.display = 'none';
+  return true;
+}
+function initPages() {
+  moveSec('#gmailSec', 'gmailMove');
+  moveSec('#forgeSec', 'forgeMove');
+  moveSec('#bnSec', 'binanceMove');
+  moveSec('#ptSec', 'ptMove');
+  moveSec('#deskSec', 'deskMove');
+  moveSec('SHOPIFY AGENT', 'shopifyMove');
+  moveSec('REAL BRAIN', 'brainMove');
+  const acc = [...document.querySelectorAll('.csec')].find(e => e.textContent.includes('ACCOUNTS'));
+  if (acc && acc.nextElementSibling) { acc.style.display = 'none'; acc.nextElementSibling.style.display = 'none'; }
+  document.getElementById('tvSym').addEventListener('change', function () { loadTV(this.value); });
+  loadTV('NSE:RELIANCE');
+  document.getElementById('openCut').addEventListener('click', () => window.open('cut.html', '_blank'));
+  document.getElementById('goSite2').addEventListener('click', () => openSite());
+  document.getElementById('copySite').addEventListener('click', () => {
+    const u = siteUrl();
+    if (navigator.clipboard) navigator.clipboard.writeText(u).then(() => toast('link copy \u2713'));
+    else { const i = document.createElement('input'); i.value = u; document.body.appendChild(i); i.select(); try { document.execCommand('copy'); toast('link copy \u2713'); } catch (e) {} i.remove(); }
+  });
+  const h = (location.hash || '').replace('#', '');
+  go(VIEWS.includes(h) ? h : 'home');
+}
+function loadTV(sym) {
+  const enc = encodeURIComponent(sym);
+  document.getElementById('chartHolder').innerHTML =
+    '<iframe src="https://www.tradingview.com/widgetembed/?symbol=' + enc + '&interval=15&theme=dark&style=1&hidesidetoolbar=1&saveimage=0&timezone=Asia%2FKolkata&withdateranges=1" allowfullscreen style="border:0"></iframe>' +
+    '<div style="font-size:9px;color:var(--dim);margin-top:4px">chart na dikhe to upar symbol badal kar wapas karo (internet chahiye)</div>';
+  drawMini();
+}
+function drawMini() {
+  const cv = document.getElementById('miniChart'); if (!cv) return;
+  const sel = document.getElementById('tvSym').value || '';
+  const map = { 'NSE:RELIANCE': 'RELIANCE', 'NSE:TCS': 'TCS', 'NSE:HDFCBANK': 'HDFCBANK', 'NSE:INFY': 'INFY', 'BINANCE:DOGEUSDT': 'DOGE17', 'BINANCE:XRPUSDT': 'XRP115', 'BINANCE:ADAUSDT': 'ADA36', 'BINANCE:SOLUSDT': 'SOL14500' };
+  const s = map[sel] || 'RELIANCE';
+  const xs = STOCKS.find(x => x.s === s); if (!xs) return;
+  const hist = PT.hist[s] || [], pr = PT.pr[s] || 0;
+  document.getElementById('miniSym').textContent = s + ' \u00B7 \u20B9' + (pr < 1 ? pr.toFixed(4) : pr.toFixed(2)) + ' \u00B7 live (12s refresh)';
+  const c = cv.getContext('2d'), W = cv.width, H = cv.height;
+  c.clearRect(0, 0, W, H);
+  if (hist.length < 2) return;
+  const mn = Math.min(...hist), mx = Math.max(...hist), r = (mx - mn) || 1;
+  c.strokeStyle = '#4fd8ff'; c.lineWidth = 2; c.beginPath();
+  hist.forEach((v, i) => { const x = i / (hist.length - 1) * (W - 20) + 10, y = H - 14 - (v - mn) / r * (H - 30); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+  c.stroke();
+  c.fillStyle = 'rgba(130,150,189,.9)'; c.font = '10px system-ui';
+  c.fillText('H ' + (mx < 1 ? mx.toFixed(4) : mx.toFixed(2)), 10, 12);
+  c.fillText('L ' + (mn < 1 ? mn.toFixed(4) : mn.toFixed(2)), 10, H - 4);
+}
+function renderPos() {
+  const old = document.getElementById('posTable'); if (old) old.remove();
+  const holds = Object.entries(PT.hold).filter(([, p]) => p.q > 0);
+  const d = document.createElement('div'); d.className = 'pcard'; d.id = 'posTable';
+  let rows = '';
+  holds.forEach(([s, p]) => {
+    const ltp = PT.pr[s] || 0, pl = (ltp - p.avg) * p.q, pc = p.avg ? ((ltp - p.avg) / p.avg * 100) : 0;
+    rows += '<tr><td><b>' + s + '</b></td><td>' + p.q + '</td><td>\u20B9' + p.avg.toFixed(1) + '</td><td>\u20B9' + ltp.toFixed(1) + '</td>' +
+      '<td class="' + (pl >= 0 ? 'pl-pos' : 'pl-neg') + '">' + (pl >= 0 ? '+' : '') + '\u20B9' + pl.toFixed(0) + ' (' + pc.toFixed(1) + '%)</td>' +
+      '<td><button class="mini" data-sx="' + s + '">SELL</button></td></tr>';
+  });
+  d.innerHTML = '<h3>MY POSITIONS \u00B7 LIVE P/L</h3>' + (rows ?
+    '<table class="postb"><tr><th>SYMBOL</th><th>QTY</th><th>AVG</th><th>LTP</th><th>P/L</th><th></th></tr>' + rows + '</table>' :
+    '<div style="font-size:10px;color:var(--dim)">koi position nahi \u2014 neeche symbol ke paas BUY dabao (virtual \u20B9, zero risk)</div>');
+  const tgt = document.getElementById('ptMove'); tgt.parentNode.insertBefore(d, tgt);
+  d.addEventListener('click', e => {
+    const b = e.target.closest('[data-sx]'); if (!b) return;
+    const s = b.dataset.sx, pos = PT.hold[s]; if (!pos) return;
+    PT.cash += (PT.pr[s] || 0) * pos.q; log('SELL ALL ' + s); delete PT.hold[s]; ptSave(); ptRender(); renderPos();
+  });
+}
+const _oldGo = go;
+setInterval(() => {
+  if (document.getElementById('v-trade').classList.contains('active')) { renderPos(); drawMini(); }
+}, 5000);
+const TAU = Math.PI * 2;
+const rand  = (a, b) => a + Math.random() * (b - a);
+const pick  = arr => arr[(Math.random() * arr.length) | 0];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ---------- canvases ---------- */
+const scene = document.getElementById('scene'), ctx = scene.getContext('2d');
+const bg    = document.getElementById('bg'),    bctx = bg.getContext('2d');
+const wave  = document.getElementById('wave'),  wctx = wave.getContext('2d');
+let W = 0, H = 0, DPR = 1, ORB = { x: 0, y: 0 }, R = 120;
+
+/* ---------- agent network ---------- */
+const AGENTS = [
+  { label:'Strategist',    fx:.353, fy:.206, bow: .16, role:'PLANNING · TASK GRAPHS'   },
+  { label:'Researcher',    fx:.202, fy:.283, bow:-.18, role:'WEB SWEEP · SOURCES'      },
+  { label:'Finance',       fx:.466, fy:.250, bow:-.14, role:'LEDGER · BURN · FORECAST' },
+  { label:'Chief of staff',fx:.194, fy:.372, bow: .20, role:'COORDINATION · BRIEFS'    },
+  { label:'Editor',        fx:.672, fy:.350, bow: .15, role:'DRAFTS · STYLE · POLISH'  },
+  { label:'Memory',        fx:.548, fy:.358, bow: .22, role:'VECTOR STORE · RECALL'    },
+  { label:'Sales',         fx:.164, fy:.439, bow:-.16, role:'PIPELINE · LEAD SCORING'  },
+  { label:'Design',        fx:.552, fy:.452, bow:-.24, role:'MOCKUPS · DESIGN TOKENS'  },
+  { label:'Email',         fx:.700, fy:.444, bow: .12, role:'INBOX · DRAFT REPLIES'    },
+  { label:'Marketing',     fx:.174, fy:.489, bow: .14, role:'CAMPAIGNS · CONTENT CAL'  },
+  { label:'Ops',           fx:.216, fy:.561, bow:-.20, role:'CRONS · BACKUPS · UPTIME' },
+  { label:'Social',        fx:.325, fy:.600, bow: .18, role:'POSTS · MENTIONS'         },
+  { label:'Engineering',   fx:.466, fy:.594, bow:-.16, role:'BUILDS · SELF-TEST SUITE' },
+  { label:'Calendar',      fx:.650, fy:.583, bow: .16, role:'SLOTS · CONFLICT RESOLVE' },
+  { label:'Developer',     fx:.150, fy:.589, bow: .22, role:'PRS · SANDBOXES · LINT'   },
+  { label:'Analytics',     fx:.266, fy:.617, bow:-.14, role:'DASHBOARDS · ANOMALIES'   },
+  { label:'CRM',           fx:.388, fy:.642, bow: .20, role:'CONTACTS · SYNC'          },
+  { label:'Drive',         fx:.780, fy:.262, bow:-.15, role:'FILES · SYNC · SEARCH'    },
+  { label:'Trading',       fx:.805, fy:.505, bow: .18, role:'MARKETS · PAPER TRADES'   },
+  { label:'Forge',         fx:.590, fy:.706, bow: .18, role:'FRONTEND · BUILD · DEPLOY' },
+  { label:'Relay',         fx:.868, fy:.642, bow:-.18, role:'BACKEND · HEALTH · CRONS'  },
+  { label:'Mailman',       fx:.902, fy:.386, bow: .14, role:'GMAIL SEND · INBOX READ'   },
+];
+AGENTS.forEach((a, i) => {
+  a.active = false; a.until = 0; a.nextLine = 0; a.flash = 0; a.hist = [];
+  a.fs = rand(.5, 1.1); a.fp = rand(0, TAU); a.delay = .45 + i * .075;
+  a.sx = 0; a.sy = 0; a.alpha = 0; a.p0 = [0, 0]; a.pc = [0, 0];
+});
+
+const ACTIONS = {
+  'Strategist':    ['goal tree rebalanced — 3 tasks reprioritized','OKR snapshot exported to Drive','dependency check: 0 blockers'],
+  'Researcher':    ['source sweep — 12 pages scanned, 3 kept','citation graph updated','summary pushed to Memory'],
+  'Finance':       ['14 transactions reconciled','burn recalculated — tracking -6% vs forecast','invoice #2231 flagged for review'],
+  'Chief of staff':['daily brief compiled','2 meeting conflicts auto-resolved','standup notes distributed'],
+  'Editor':        ['draft polished: q3-report.md','tone pass complete — 0 deviations','changelog proofed'],
+  'Memory':        ['vector index compacted — 512 chunks','3 stale facts archived','recall latency 41ms'],
+  'Sales':         ['lead scored 87/100 — Acme Corp','follow-up drafted for review','pipeline delta: +2 deals'],
+  'Design':        ['2 mockups exported','design tokens synced to repo','handoff package updated'],
+  'Email':         ['3 replies drafted — review pending','newsletter noise filtered: 14','inbox zero reached'],
+  'Marketing':     ['content calendar refreshed','A/B test hit significance','campaign metrics synced'],
+  'Ops':           ['nightly backup verified','3 cron jobs healthy','uptime 99.98%'],
+  'Social':        ['4 posts scheduled','mention sentiment: positive','engagement +12% w/w'],
+  'Engineering':   ['build #482 green','self-test suite: 96 checks passed','dependency drift: none'],
+  'Analytics':     ['dashboards refreshed','anomaly scan: clear','weekly report generated'],
+  'Drive':         ['142 files indexed overnight','shared permissions audited — 1 fix','duplicate cleanup: 26 MB freed'],
+  'Trading':       ['NIFTY alert: 24,850 resistance broken','portfolio P&L synced: +2.3% today','paper order drafted — awaiting approval','stop-loss audit: all positions in limits'],
+  'Calendar':      ['2 conflicts auto-resolved','travel buffers added','tomorrow: 4 events, 2 focus blocks'],
+  'Developer':     ['PR review queued','sandbox rebuilt in 42s','lint: 0 errors'],
+  'CRM':           ['37 contacts enriched','2 duplicates merged','sync with Drive complete'],
+};
+
+/* decorative PCB-style curves (fractional coords) */
+const DEC = [
+  [[-.02,.78],[.22,.55],[.38,.68],[.55,.35]],
+  [[1.02,.22],[.78,.38],[.62,.28],[.50,.42]],
+  [[-.02,.35],[.18,.30],[.30,.16],[.52,.20]],
+  [[1.02,.62],[.82,.55],[.72,.66],[.55,.60]],
+  [[.12,1.05],[.25,.85],[.42,.80],[.50,.62]],
+];
+const streaks = []; // light packets travelling along DEC curves
+
+/* orb particles */
+const P = [];
+for (let i = 0; i < 330; i++) P.push({
+  r: Math.sqrt(Math.random()) * .8 + .06, a: rand(0, TAU),
+  va: rand(-.28, .28), sz: rand(.6, 2.1), ph: rand(0, TAU),
+  white: Math.random() < .22
+});
+
+/* stars */
+let twinkles = [];
+function buildStars() {
+  bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bctx.clearRect(0, 0, W, H);
+  // nebula washes
+  const neb = (x, y, r, c) => {
+    const g = bctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)');
+    bctx.fillStyle = g; bctx.fillRect(x - r, y - r, r * 2, r * 2);
+  };
+  neb(W * .50, H * .45, Math.max(W, H) * .45, 'rgba(30,80,190,.16)');
+  neb(W * .16, H * .22, Math.max(W, H) * .30, 'rgba(20,60,150,.10)');
+  neb(W * .85, H * .75, Math.max(W, H) * .30, 'rgba(15,70,160,.09)');
+  // static stars
+  const n = Math.round(W * H / 5200);
+  for (let i = 0; i < n; i++) {
+    const x = rand(0, W), y = rand(0, H), r = rand(.4, 1.3), a = rand(.12, .7);
+    bctx.fillStyle = `rgba(190,215,255,${a})`;
+    bctx.beginPath(); bctx.arc(x, y, r, 0, TAU); bctx.fill();
+  }
+  // twinkling subset (drawn live)
+  twinkles = [];
+  for (let i = 0; i < 34; i++) twinkles.push({ x: rand(0, W), y: rand(0, H), r: rand(.8, 1.7), ts: rand(.6, 2.4), ph: rand(0, TAU) });
+}
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  for (const c of [scene, bg]) {
+    c.width = W * DPR; c.height = H * DPR;
+    c.style.width = W + 'px'; c.style.height = H + 'px';
+  }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ORB = { x: W * .5, y: H * .45 };
+  R = clamp(Math.min(W, H) * .15, 78, 175);
+  const wr = wave.getBoundingClientRect();
+  wave.width = wr.width * DPR; wave.height = 64 * DPR; wctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  buildStars();
+}
+window.addEventListener('resize', resize);
+
+/* ---------- state ---------- */
+const S = { listening: true, hover: null, selected: null, boot: performance.now() };
+let now = 0, nextAct = 2.2, chk = null;
+const pulses = [];
+
+/* ---------- helpers ---------- */
+function qp(a, t) { // point on orb→node quadratic curve
+  const u = 1 - t, c = a.pc, p1 = [a.sx, a.sy], p0 = a.p0;
+  return [u * u * p0[0] + 2 * u * t * c[0] + t * t * p1[0],
+          u * u * p0[1] + 2 * u * t * c[1] + t * t * p1[1]];
+}
+function cubic(pt, t) {
+  const u = 1 - t;
+  const w = (A, B, C, D) => u * u * u * A + 3 * u * u * t * B + 3 * u * t * t * C + t * t * t * D;
+  return [w(pt[0][0], pt[1][0], pt[2][0], pt[3][0]), w(pt[0][1], pt[1][1], pt[2][1], pt[3][1])];
+}
+function spawnPulse(a, dir) { pulses.push({ a, dir, t: dir > 0 ? 0 : 1, sp: rand(.55, .95) }); }
+
+/* ---------- log / toast / voices ---------- */
+const logEl = document.getElementById('log');
+function log(msg) {
+  const d = document.createElement('div');
+  d.className = 'll';
+  const tm = new Date().toTimeString().slice(0, 8);
+  d.innerHTML = `<span class="lt">${tm}</span>${msg}`;
+  logEl.appendChild(d);
+  while (logEl.children.length > 7) logEl.removeChild(logEl.firstChild);
+}
+const toastEl = document.getElementById('toast');
+let toastTm = null;
+function toast(msg) {
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(toastTm); toastTm = setTimeout(() => toastEl.classList.remove('show'), 3200);
+}
+
+const VOICES = ['EMILY — MISSION CTRL','ECHO — MAIN','LOGOS — REASONING','SHANDOR — DISPLAY','MARK SWIFT',
+  'SC MURMUR','AIDEN BOYD','SABRINA STONE','VETRIVEL','IRONJAW','CALEDONIA TUTOR','MIRA 5G',
+  'VOICE ART — CREDITS','BHARATHAN THENN'].map(n => ({ n, st: 'off' }));
+const vlist = document.getElementById('vlist');
+function renderVoices() {
+  vlist.innerHTML = VOICES.map(v =>
+    `<li class="${v.st}"><span class="vd"></span>${v.n}<span class="vs">${
+      v.st === 'on' ? 'ACTIVE' : v.st === 'sp' ? 'SPEAKING' : 'READY'}</span></li>`).join('');
+}
+function cycleVoices() {
+  VOICES.forEach(v => v.st = 'off');
+  const i = (Math.random() * VOICES.length) | 0, j = (Math.random() * VOICES.length) | 0;
+  VOICES[i].st = 'sp'; if (j !== i) VOICES[j].st = 'on';
+  renderVoices();
+}
+setInterval(cycleVoices, 3600); renderVoices();
+if (document.readyState === 'complete') initPages(); else window.addEventListener('load', initPages);
+
+/* ---------- clock ---------- */
+const clockEl = document.getElementById('clock'), sysEl = document.getElementById('sysState'); 
+      
