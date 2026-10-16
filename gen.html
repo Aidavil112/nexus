@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>🎬 VIDEO AGENT — NEXUS</title>
+<style>
+:root{--bg:#030814;--card:rgba(12,24,50,.55);--line:rgba(110,170,255,.18);--gold:#ffd75e;--cyan:#7fd8ff;--dim:#8fa8cf;--ok:#59e6a8;--bad:#ff8a8a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg) radial-gradient(1200px 600px at 50% -10%, rgba(30,80,190,.25), transparent);color:#e8f2ff;min-height:100vh;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;padding-bottom:50px}
+.top{position:sticky;top:0;background:rgba(5,10,24,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:5}
+.top .logo{font-weight:800;letter-spacing:3px;color:var(--gold)}
+.wrap{max-width:560px;margin:0 auto;padding:18px 16px}
+h1{font-size:17px;letter-spacing:2px;margin:14px 0 4px}
+.sub{font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:14px;line-height:1.6}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:10px;letter-spacing:2px;color:var(--cyan);margin:10px 0 6px}
+input,textarea,select{width:100%;background:rgba(3,8,20,.7);border:1px solid var(--line);color:#e8f2ff;border-radius:10px;padding:12px;font-size:14px;outline:none;font-family:inherit}
+textarea{min-height:80px;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:rgba(255,205,90,.5)}
+.hint{font-size:10.5px;color:var(--dim);margin-top:6px;line-height:1.6}
+.btn{display:block;width:100%;border:none;border-radius:12px;padding:14px;font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer;font-family:inherit}
+.gold{background:linear-gradient(135deg,#ffd75e,#ffb347);color:#231a02;margin-top:14px;box-shadow:0 0 24px rgba(255,190,60,.25)}
+.ghost{background:transparent;border:1px solid var(--line);color:var(--cyan);margin-top:8px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.stat{margin-top:14px;border-radius:12px;border:1px solid var(--line);background:rgba(3,8,20,.6);padding:12px;font-size:12px;line-height:1.7;color:var(--dim);white-space:pre-wrap;word-break:break-word}
+.stat.ok{border-color:rgba(90,225,180,.5);color:var(--ok)}
+.stat.bad{border-color:rgba(255,120,120,.5);color:var(--bad)}
+video{width:100%;max-height:60vh;border-radius:12px;margin-top:12px;background:#000}
+.bar{height:8px;background:rgba(110,170,255,.12);border-radius:99px;overflow:hidden;margin-top:10px}
+.bar div{height:100%;background:linear-gradient(90deg,#ffd75e,#ffb347);width:0%;transition:.5s}
+.pill{display:inline-block;font-size:9px;letter-spacing:2px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--dim);margin:0 6px 10px 0}
+</style>
+</head>
+<body>
+<div class="top"><span class="logo">NEXUS</span><span style="font-size:10px;letter-spacing:2px;color:var(--dim)">VIDEO AGENT · AI BANAYEGA · AI POST KAREGA</span></div>
+<div class="wrap">
+<h1>🎬 AI VIDEO AGENT</h1>
+<div class="sub">Prompt likho → Agent khud scenes banayega + voice + render karega → phir INSTAGRAM par khud post! 🤖</div>
+
+<div class="card">
+  <label>SERVER</label>
+  <input id="srv" placeholder="https://nexus-agent-ycck.onrender.com">
+  <label>1 · PROMPT (video kis bare me?)</label>
+  <textarea id="prompt" placeholder="jaise: golden AI orb in dark starfield with particles, futuristic tech vibes"></textarea>
+  <label>2 · SCENES</label>
+  <select id="scenes"><option>4</option><option selected>6</option><option>8</option></select>
+  <label>3 · VOICEOVER</label>
+  <select id="voice"><option value="hi">🇮🇳 Hindi voice</option><option value="en">🇬🇧 English voice</option><option value="none">🔇 Silent</option></select>
+  <label>4 · SCENE TEXTS (optional — 1 per line)</label>
+  <input id="t1" placeholder="line 1"><input id="t2" placeholder="line 2" style="margin-top:6px"><input id="t3" placeholder="line 3" style="margin-top:6px">
+</div>
+
+<button class="btn gold" id="go">🎬 VIDEO BANAO — AGENT CHAL PADE!</button>
+<div class="bar"><div id="bar"></div></div>
+<div class="stat" id="stat">Status: ready. Prompt likho aur banne do!</div>
+
+<div id="result"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id), stat=$('stat'), bar=$('bar');
+const srvEl=$('srv');
+srvEl.value=localStorage.getItem('nexus_srv')||'https://nexus-agent-ycck.onrender.com';
+srvEl.addEventListener('change',()=>localStorage.setItem('nexus_srv',srvEl.value.trim().replace(/\/$/,'')));
+function srv(){return srvEl.value.trim().replace(/\/$/,'')}
+$('go').addEventListener('click',async()=>{
+  const p=$('prompt').value.trim();
+  if(!p){stat.className='stat bad';stat.textContent='❌ PEHLE PROMPT LIKHO!';return}
+  const texts=[$('t1').value.trim(),$('t2').value.trim(),$('t3').value.trim()].filter(x=>x);
+  stat.className='stat'; stat.textContent='⏳ Agent kaam shuru kar raha hai… (2-4 min lagenge, tab kholo rehne do)';
+  bar.style.width='8%';
+  let id='';
+  try{
+    const r=await fetch(srv()+'/video',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:p,scenes:+$('scenes').value,voice:$('voice').value,texts})});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.detail||('HTTP '+r.status));
+    id=j.id;
+  }catch(e){stat.className='stat bad';stat.textContent='❌ START fail: '+e.message+'\n(Server soya hoga — 1 min baad dobara dabao)';bar.style.width='0%';return}
+  while(true){
+    await new Promise(r=>setTimeout(r,4000));
+    let v;
+    try{ v=await (await fetch(srv()+'/video/'+id)).json(); }catch(e){ continue; }
+    if(v.status==='error'){stat.className='stat bad';stat.textContent='❌ AGENT FAIL:\n'+v.error;bar.style.width='0%';return}
+    const stg=v.stage||'';
+    if(stg.startsWith('image')){const m=stg.match(/(\d+)\/(\d+)/);if(m)bar.style.width=(10+60*m[1]/m[2])+'%'}
+    else if(stg==='voice')bar.style.width='75%';
+    else if(stg==='render')bar.style.width='88%';
+    stat.textContent='⏳ Agent: '+stg+'…';
+    if(v.status==='done'){
+      bar.style.width='100%';
+      stat.className='stat ok';stat.textContent='🎉 VIDEO READY!\n'+v.url;
+      const url=srv()+v.url;
+      $('result').innerHTML='<div class="card"><video controls src="'+url+'"></video>'+
+        '<label style="margin-top:12px">CAPTION (Instagram ke liye)</label>'+
+        '<textarea id="cap">'+p.slice(0,120)+'\\n#ai #nexus #reels #automation</textarea>'+
+        '<button class="btn gold" id="post">📲 POST KARO — @nexusaistore</button>'+
+        '<div class="stat" id="pstat">Status: post ka intezaar…</div></div>';
+      $('post').addEventListener('click',async()=>{
+        const ps=$('pstat'); ps.className='stat'; ps.textContent='⏳ PostZen ko bhej raha hoon…';
+        try{
+          const r2=await fetch(srv()+'/post',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({content:$('cap').value,platform:'instagram',mediaUrl:url,postType:'reel'})});
+          const t2=await r2.text(); let j2={};try{j2=JSON.parse(t2)}catch(e){}
+          if(r2.ok&&j2.ok){ps.className='stat ok';ps.textContent='🎉 POST QUEUED — INSTAGRAM PAR JA RAHA HAI!\nID: '+(j2.post?j2.post._id:'')}
+          else{ps.className='stat bad';ps.textContent='❌ '+t2.slice(0,300)}
+        }catch(e){ps.className='stat bad';ps.textContent='❌ '+e.message}
+      });
+      return;
+    }
+  }
+});
+</script>
+</body>
+</html>
