@@ -298,7 +298,7 @@
   @media (max-width:760px){
     aside#voices{display:none}
     #selfChk{display:none}
-    #log{width:70vw}
+    #log{width:70vw;bottom:158px}
     .hl .clock{font-size:19px}
   }
   ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(110,170,255,.25);border-radius:4px}
@@ -775,7 +775,7 @@ function resize() {
   }
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   bctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ORB = { x: W * .5, y: H * .45 };
+  ORB = { x: W * .5, y: H * .40 };
   R = clamp(Math.min(W, H) * .15, 78, 175);
   const wr = wave.getBoundingClientRect();
   wave.width = wr.width * DPR; wave.height = 64 * DPR; wctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -1010,7 +1010,7 @@ function drawNetwork() {
   ctx.textBaseline = 'middle';
   for (const a of AGENTS) {
     const bx = a.fx * W + Math.sin(t * a.fs + a.fp) * 5;
-    const by = a.fy * H + Math.cos(t * a.fs * .8 + a.fp) * 5;
+    const by = a.fy * H - H * .035 + Math.cos(t * a.fs * .8 + a.fp) * 5;
     // never let a node sit inside the orb ring — push it outward if needed
     const ddx = bx - ORB.x, ddy = by - ORB.y, dd = Math.hypot(ddx, ddy);
     const minD = R * 1.22;
