@@ -322,6 +322,7 @@
   <button class="tb" data-v="binance">⛣ BINANCE</button>
   <button class="tb" data-v="editor">✂ EDITOR</button>
   <button class="tb" data-v="brain">🧠 BRAIN</button>
+  <button class="tb" data-v="video">🎬 VIDEO</button>
 </nav>
 <section class="view" id="v-trade"><div class="vwrap"><div class="vtitle">📈 TRADING — REAL CHART · PAPER ORDERS · JOURNAL</div>
   <div class="pcard"><h3>REAL CHART (TradingView)</h3>
@@ -342,6 +343,29 @@
 <section class="view" id="v-forge"><div class="vwrap"><div class="vtitle">🏗 DEPLOY — GITHUB · KHUD UPLOAD</div><div id="forgeMove"></div>
   <div class="pcard"><h3>YOUR LIVE SITE</h3><div id="siteUrlBox" style="font-size:11px;color:var(--cyan);word-break:break-all;margin-bottom:8px"></div>
   <div class="prow2"><button class="mini" id="goSite2">🌐 SITE KHOLDO</button><button class="mini" id="copySite">⎘ COPY LINK</button></div></div>
+</div></section>
+<section class="view" id="v-video"><div class="vwrap"><div class="vtitle">🎬 VIDEO AGENT — AI BANAYEGA · AI POST KAREGA</div>
+  <div class="pcard"><h3>PROMPT <span style="color:var(--dim);font-weight:400">(khaali chhodo = AUTO MODE me agent khud topic chunega)</span></h3>
+    <textarea id="vaPrompt" placeholder="jaise: AI agents editing videos instead of humans" style="width:100%;min-height:54px;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:11px;border-radius:8px;padding:8px;outline:none;resize:vertical"></textarea>
+    <div class="prow2" style="margin-top:8px">
+      <select id="vaScenes" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:8px;outline:none"><option value="3">3 scenes</option><option value="4" selected>4 scenes</option><option value="5">5 scenes</option><option value="6">6 scenes</option></select>
+      <select id="vaVoice" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:8px;outline:none"><option value="hi">🇮🇳 Hindi voice</option><option value="en">🇬🇧 English voice</option><option value="none">🔇 Silent</option></select>
+    </div>
+    <div class="prow2" style="margin-top:6px"><input id="vaT1" placeholder="scene text 1 (optional)" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none"></div>
+    <div class="prow2" style="margin-top:6px"><input id="vaT2" placeholder="scene text 2" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none"><input id="vaT3" placeholder="scene text 3" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none"></div>
+    <div class="prow2" style="margin-top:10px">
+      <button class="mini" id="vaAuto" style="flex:1;border-color:rgba(255,205,90,.6);color:var(--gold)">🎲 AUTO MODE</button>
+      <button class="mini" id="vaGo" style="flex:1;border-color:rgba(120,220,255,.5);color:var(--cyan)">🎬 VIDEO BANAO</button>
+    </div>
+    <div class="prow2" style="margin-top:10px;align-items:center"><div style="flex:1;height:7px;background:rgba(110,170,255,.12);border-radius:99px;overflow:hidden"><div id="vaBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ffd75e,#ffb347);transition:.5s"></div></div></div>
+    <div id="vaStat" style="font-size:10.5px;color:var(--dim);margin-top:8px;line-height:1.7">ready — AUTO dabao ya prompt likho</div>
+    <div id="vaOut"></div>
+    <div id="vaPostRow" style="display:none;margin-top:8px">
+      <input id="vaCap" placeholder="caption…" style="width:100%;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none">
+      <div class="prow2" style="margin-top:6px"><button class="mini" id="vaPost" style="flex:1;border-color:rgba(90,225,180,.6);color:#59e6a8">📲 POST KARO — @nexusaistore</button></div>
+      <div id="vaPStat" style="font-size:10px;color:var(--dim);margin-top:6px"></div>
+    </div>
+  </div>
 </div></section>
 <section class="view" id="v-binance"><div class="vwrap"><div class="vtitle">⛣ BINANCE — API · BALANCE</div><div id="binanceMove"></div></div></section>
 <section class="view" id="v-editor"><div class="vwrap"><div class="vtitle">✂ NEXUS CUT — VIDEO EDITOR</div>
@@ -2527,6 +2551,61 @@ Voice.init();
 resize();
 requestAnimationFrame(frame);
 if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can speak now');
+
+/* ---------- VIDEO AGENT (Render server: /video, /video/auto, /post) ---------- */
+(function () {
+  const VS = 'https://nexus-agent-ycck.onrender.com';
+  const $ = id => document.getElementById(id);
+  const st = $('vaStat'); if (!st) return;
+  function setP(p) { $('vaBar').style.width = p + '%'; }
+  async function poll(id) {
+    while (true) {
+      await new Promise(r => setTimeout(r, 4000));
+      let v; try { v = await (await fetch(VS + '/video/' + id)).json(); } catch (e) { continue; }
+      if (!v) continue;
+      if (v.status === 'error') { st.innerHTML = '✗ AGENT FAIL: ' + (v.error || ''); setP(0); return null; }
+      const g = v.stage || '';
+      if (g.indexOf('image') === 0) { const m = g.match(/(\d+)\/(\d+)/); if (m) setP(10 + 60 * m[1] / m[2]); }
+      else if (g === 'voice') setP(75); else if (g === 'render') setP(88);
+      st.textContent = '⏳ ' + g + (v.topic ? (' · ' + v.topic) : '');
+      if (v.status === 'done') { setP(100); st.innerHTML = '✓ VIDEO READY! niche dekho ↓'; return VS + v.url; }
+    }
+  }
+  function show(url) {
+    $('vaOut').innerHTML = '<video controls src="' + url + '" style="width:100%;max-height:50vh;border-radius:10px;background:#000;margin-top:8px"></video>';
+    $('vaPostRow').style.display = 'block';
+    $('vaCap').value = 'Ye reel AI agent ne khud banayi 🤖✨ #ai #nexus #reels #automation';
+    $('vaPost').onclick = async () => {
+      const ps = $('vaPStat'); ps.textContent = '⏳ PostZen ko bhej rahe hain…';
+      try {
+        const r = await fetch(VS + '/post', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: $('vaCap').value, platform: 'instagram', mediaUrl: url, postType: 'reel' }) });
+        const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch (e) {}
+        if (r.ok && j.ok) { ps.textContent = '🎉 POST QUEUED — Instagram par ja raha hai!'; log('📲 insta post queued (agent video)'); Voice.speak('Post Instagram par bhej diya hai.'); }
+        else { ps.textContent = '✗ ' + t.slice(0, 180); log('✗ agent video post fail'); }
+      } catch (e) { ps.textContent = '✗ ' + e.message; }
+    };
+  }
+  async function start(ep, body, okMsg) {
+    st.textContent = okMsg; setP(6);
+    try {
+      const r = await fetch(VS + ep, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.detail || ('HTTP ' + r.status));
+      if (j.topic) st.textContent = '🤖 Topic: ' + j.topic;
+      const url = await poll(j.id);
+      if (url) { show(url); Voice.speak('Video ban gayi hai. Dekho aur post karo.'); }
+    } catch (e) {
+      st.innerHTML = '✗ ' + e.message + '<br>(server soya hoga — 1 min baad dobara dabao)'; setP(0);
+    }
+  }
+  $('vaAuto').addEventListener('click', () => start('/video/auto', { topic: $('vaPrompt').value.trim(), scenes: +$('vaScenes').value, voice: $('vaVoice').value }, '🤖 Agent topic research kar raha hai…'));
+  $('vaGo').addEventListener('click', () => {
+    const p = $('vaPrompt').value.trim(); if (!p) { st.textContent = '✗ pehle prompt likho (ya AUTO dabao)'; return; }
+    const texts = [$('vaT1').value.trim(), $('vaT2').value.trim(), $('vaT3').value.trim()].filter(x => x);
+    start('/video', { prompt: p, scenes: +$('vaScenes').value, voice: $('vaVoice').value, texts: texts }, '⏳ Agent scenes bana raha hai…');
+  });
+})();
 </script>
 </body>
 </html>
