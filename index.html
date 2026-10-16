@@ -1945,7 +1945,61 @@ async function fetchWeatherStr() {
     const j = await r.json();
     const c = j.current_weather; if (!c) return '';
     const codes = { 0: 'saaf aasman', 1: 'thode baadal', 2: 'baadal', 3: 'ghane baadal', 45: 'kohra', 48: 'kohra', 51: 'phuhaar', 53: 'phuhaar', 55: 'phuhaar', 61: 'halki baarish', 63: 'baarish', 65: 'tez baarish', 80: 'baarish ke 
-  try {
+  try {    return 'Weather (Bengaluru): ' + Math.round(c.temperature) + '\u00B0C, ' + (codes[c.weathercode] || 'mausam') + ', hawa ' + Math.round(c.windspeed) + ' km/h.';
+  } catch (e) { return ''; }
+}
+
+/* ---------- reminders agent ---------- */
+const REM = { list: [] };
+try { REM.list = JSON.parse(localStorage.getItem('nexus_rem') || '[]'); } catch (e) {}
+window.REM = REM;
+function remSave() { try { localStorage.setItem('nexus_rem', JSON.stringify(REM.list)); } catch (e) {} }
+function addReminder(text, when) { REM.list.push({ id: Date.now(), text, when }); remSave(); }
+function parseRemind(s) {
+  let when = Date.now() + 10 * 60000;
+  const mm = s.match(/(\d+)\s*(minute|min|mint|ghante|ghanta|hour)/);
+  if (mm) when = Date.now() + (+mm[1]) * (/ghant|hour/.test(mm[2]) ? 3600000 : 60000);
+  else {
+    const tt = s.match(/(\d{1,2})[:\.](\d{2})/);
+    if (tt) { const d = new Date(); d.setHours(+tt[1], +tt[2], 0, 0); if (d <= new Date()) d.setDate(d.getDate() + 1); when = d.getTime(); }
+  }
+  const label = s.replace(/\b(reminder|remind|karo|kar do|lagao|lagwa|yaad|dila|dila do|dilao|set|ek|into|me|men|minute|min|mint|ghanta|ghante|hour|ke|baad|pe|par|at)\b/gi, ' ').replace(/\s+/g, ' ').trim() || 'reminder';
+  return { when, label };
+}
+setInterval(() => {
+  const tn = Date.now();
+  const due = REM.list.filter(r => r.when <= tn);
+  if (due.length) {
+    due.forEach(r => {
+      Voice.speak('Reminder: ' + r.text);
+      toast('\u23F0 REMINDER: ' + r.text.toUpperCase().slice(0, 44));
+      typeMsg('NEXUS \u00B7 REMINDER', '\u23F0 ' + r.text);
+      log('\u23F0 reminder fired \u2014 ' + r.text);
+    });
+    REM.list = REM.list.filter(r => r.when > tn); remSave();
+  }
+}, 15000);
+
+/* ---------- TradingView live widgets (free embeds) ---------- */
+(function initTVWidget() {
+  const host = document.getElementById('tvTicker'); if (!host) return;
+  host.innerHTML = '<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>' +
+    '<div style="font-size:8.5px;color:var(--dim);margin-top:3px">\u25B2 LIVE NSE prices by TradingView \u2014 internet pe chalta hai (file download karke browser me kholo)</div>';
+  const s = document.createElement('script');
+  s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+  s.async = true;
+  s.text = JSON.stringify({
+    symbols: [
+      { proName: 'NSE:RELIANCE', title: 'Reliance' }, { proName: 'NSE:TCS', title: 'TCS' },
+      { proName: 'NSE:HDFCBANK', title: 'HDFC Bank' }, { proName: 'NSE:ICICIBANK', title: 'ICICI' },
+      { proName: 'NSE:INFY', title: 'Infosys' }, { proName: 'NSE:SBIN', title: 'SBI' },
+      { proName: 'NSE:BHARTIARTL', title: 'Airtel' }, { proName: 'NSE:TATAMOTORS', title: 'Tata Motors' },
+      { proName: 'NSE:WIPRO', title: 'Wipro' }, { proName: 'NSE:ONGC', title: 'ONGC' },
+      { proName: 'NSE:IRFC', title: 'IRFC' }, { proName: 'NSE:IEX', title: 'IEX' },
+      { proName: 'NSE:ETERNAL', title: 'Eternal' }, { proName: 'NSE:IDEA', title: 'Idea' }
+    ],
+    showSymbolLogo: true, isTransparent: true, displayMode: 'adaptive', colorTheme: 'dark', locale: 'in'
+  });
     const src = await selfCapture();
     const same = localStorage.getItem('nexus_ghhash') === tinyHash(src);
     if (same && silent) { GH.busy = false; return null; }
