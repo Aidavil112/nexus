@@ -881,6 +881,7 @@ setInterval(tickClock, 1000); tickClock();
 const badge = document.getElementById('micBadge'), micTxt = document.getElementById('micTxt');
 const btnPower = document.getElementById('btnPower'), deckcap = document.getElementById('deckcap');
 function setListening(on) {
+  const changed = S.listening !== on;
   S.listening = on;
   badge.classList.toggle('off', !on);
   btnPower.classList.toggle('off', !on);
@@ -888,7 +889,7 @@ function setListening(on) {
   deckcap.textContent = on ? 'LISTENING' : 'STANDBY';
   if (!on) { pulses.length = 0; AGENTS.forEach(a => a.active = false); unhookMic(); stopRec(); liveMode = false; const bl = document.getElementById('btnLive'); if (bl) bl.classList.remove('on'); }
   else hookMic();
-  log(on ? '🎙 microphone armed — listening for wake phrase' : '⏸ session paused — standing by');
+  if (changed) log(on ? '🎙 microphone armed — listening for wake phrase' : '⏸ session paused — standing by');
 }
 badge.addEventListener('click', () => setListening(!S.listening));
 btnPower.addEventListener('click', () => setListening(!S.listening));
@@ -1330,6 +1331,7 @@ let rec = null, recOn = false, liveMode = false, holdForTTS = false, restartTm =
 const btnVoice = document.getElementById('btnVoice');
 const btnLive  = document.getElementById('btnLive');
 const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let lastEarErr = '', earFails = 0, lastRestartAt = 0;
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function noSTT() {
   if (IS_IOS) {
@@ -1370,7 +1372,8 @@ function startRec() {
     }
   };
   rec.onerror = ev => {
-    log('✗ ear error: ' + ev.error);
+    lastEarErr = ev.error || '';
+    if (lastEarErr !== 'aborted' && lastEarErr !== 'no-speech') log('✗ ear error: ' + lastEarErr);
     if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
       toast('MIC PERMISSION BLOCKED — FILE DOWNLOAD KARKE CHROME ME KHOLO');
       liveMode = false; btnLive.classList.remove('on');
@@ -1381,7 +1384,18 @@ function startRec() {
     if (S.listening && deckcap.textContent.indexOf('SPEAKING') < 0)
       deckcap.textContent = liveMode ? '🔴 LIVE VOICE' : 'LISTENING';
     clearTimeout(restartTm);
-    if (liveMode && !holdForTTS) restartTm = setTimeout(startRec, 350);
+    if (liveMode && !holdForTTS) {
+      const t = Date.now();
+      earFails = (t - lastRestartAt < 4000) ? earFails + 1 : 0;
+      lastRestartAt = t;
+      if (earFails > 6) {
+        earFails = 0; liveMode = false; btnLive.classList.remove('on');
+        toast('LIVE VOICE thak gaya — dobara 🔴 LIVE dabaao');
+        log('⏸ live loop rest (iOS mic churn) — LIVE dabao phir se');
+        return;
+      }
+      restartTm = setTimeout(startRec, (lastEarErr === 'aborted' || lastEarErr === 'no-speech') ? 1400 : 350);
+    }
   };
   try {
     rec.start();
