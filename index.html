@@ -1945,3 +1945,305 @@ async function fetchWeatherStr() {
     const j = await r.json();
     const c = j.current_weather; if (!c) return '';
     const codes = { 0: 'saaf aasman', 1: 'thode baadal', 2: 'baadal', 3: 'ghane baadal', 45: 'kohra', 48: 'kohra', 51: 'phuhaar', 53: 'phuhaar', 55: 'phuhaar', 61: 'halki baarish', 63: 'baarish', 65: 'tez baarish', 80: 'baarish ke 
+  try {
+    const src = await selfCapture();
+    const same = localStorage.getItem('nexus_ghhash') === tinyHash(src);
+    if (same && silent) { GH.busy = false; return null; }
+    const pages404 = '<!DOCTYPE html><meta charset="utf-8"><title>NEXUS</title><meta http-equiv="refresh" content="0;url=/">NEXUS — <a href="/">home</a>';
+    const files = { 'index.html': src, 'robots.txt': 'User-agent: *\nAllow: /\n', '404.html': pages404 };
+    let created = 0, updated = 0;
+    for (const path of Object.keys(files)) {
+      let sha = null;
+      try { const ex = await ghApi('/repos/' + GH.u + '/' + GH.r + '/contents/' + path + '?ref=main'); sha = ex.sha; } catch (e) { if (!/404/.test(e.message)) throw e; }
+      const body = { message: 'NEXUS auto-upload ' + new Date().toLocaleString(), content: btoa(unescape(encodeURIComponent(files[path]))), branch: 'main' };
+      if (sha) { body.sha = sha; updated++; } else created++;
+      await ghApi('/repos/' + GH.u + '/' + GH.r + '/contents/' + path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+    let purl = 'https://' + GH.u + '.github.io/' + GH.r + '/';
+    try { await ghApi('/repos/' + GH.u + '/' + GH.r + '/pages'); } catch (e) {
+      try { await ghApi('/repos/' + GH.u + '/' + GH.r + '/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: { branch: 'main', path: '/' } }) }); } catch (e2) {}
+    }
+    localStorage.setItem('nexus_ghhash', tinyHash(src));
+    GH.last = new Date().toLocaleTimeString(); GH.busy = false;
+    ghStat('● UPLOAD ✓ ' + new Date().toLocaleTimeString() + ' — site ~60s me live: ' + purl);
+    log('↑ FORGE deploy ✓ (' + created + ' new, ' + updated + ' update)'); toast('↑ FORGE: upload done — ' + purl);
+    return 'Upload complete! ' + created + ' nayi files, ' + updated + ' update. Site lagbhag 60 second me live: ' + purl;
+  } catch (e) {
+    GH.busy = false; ghStat('✗ deploy fail: ' + e.message);
+    return 'Deploy fail: ' + e.message + ' — token sahi/expiry? repo name sahi?';
+  }
+}
+let lastAutoPush = 0;
+function forgeAutoTick() {
+  if (!GH.auto || GH.busy || !GH.t) return;
+  if (Date.now() - lastAutoPush < 30 * 60000) return;
+  lastAutoPush = Date.now();
+  forgeDeploy(true);
+}
+
+/* wiring */
+(function wireFG() {
+  const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  const gv = id => (document.getElementById(id) || {}).value || '';
+  on('gmSave', () => { GMAX.url = gv('gmUrl').trim(); localStorage.setItem('nexus_gm', GMAX.url); localStorage.setItem('nexus_gmsec', gv('gmSecN').trim() || 'nexus'); gmStat(GMAX.url ? '● relay set ✓ — SEND / INBOX try karo' : '○ khali'); });
+  on('gmSend', () => gmailSend(gv('gmTo').trim(), gv('gmSub').trim(), gv('gmBody').trim()).then(m => { gmStat(m); log(m); }));
+  on('gmInbox', () => gmailInbox().then(m => { if (m) log(m); }));
+  on('ghSave', () => {
+    GH.u = gv('ghUser').trim(); GH.r = gv('ghRepo').trim(); GH.t = gv('ghTok').trim();
+    localStorage.setItem('nexus_ghu', GH.u); localStorage.setItem('nexus_ghr', GH.r); localStorage.setItem('nexus_ght', GH.t);
+    ghStat(GH.t ? '● saved ✓ — DEPLOY ABHI dabao (repo: ' + GH.u + '/' + GH.r + ')' : '○ khali');
+  });
+  on('ghDeploy', () => forgeDeploy(false).then(m => { if (m) log(m); }));
+  on('ghSite', () => openSite());
+  on('ghAuto', () => {
+    GH.auto = !GH.auto; localStorage.setItem('nexus_ghauto', GH.auto ? '1' : '0');
+    document.getElementById('ghAuto').textContent = 'AUTO: ' + (GH.auto ? 'ON' : 'OFF');
+    ghStat(GH.auto ? '● AUTO ON — kaam complete hote hi khud upload (30 min check)' : '● AUTO OFF');
+  });
+  const gmu = document.getElementById('gmUrl'); if (gmu && !gmu.value) gmu.value = GMAX.url;
+  const gsn = document.getElementById('gmSecN'); if (gsn) gsn.value = localStorage.getItem('nexus_gmsec') || 'nexus';
+  if (GMAX.url) gmStat('● relay set — SEND / INBOX try karo');
+  if (GH.t) ghStat((GH.auto ? '● AUTO ON' : '● token set') + ' — ' + GH.u + '/' + GH.r);
+  const ab = document.getElementById('ghAuto'); if (ab) ab.textContent = 'AUTO: ' + (GH.auto ? 'ON' : 'OFF');
+})();
+
+/* ================= BINANCE CONNECT (read-only) ================= */
+const BN = { k: localStorage.getItem('nexus_bnk') || '', s: localStorage.getItem('nexus_bns') || '' };
+function bStat(m) { const el = document.getElementById('bnStat'); if (el) el.textContent = m; }
+function openBinanceSetup() { const b = document.getElementById('ctrBtn'); if (b) b.click(); const s = document.getElementById('bnSec'); if (s) setTimeout(() => s.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400); }
+async function bHmac(q, secret) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(q));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function binanceTest() {
+  if (!BN.k || !BN.s) { openBinanceSetup(); return 'Pehle API key + secret daalo (BINANCE section khol diya). Binance app \u2192 Profile \u2192 API Management \u2192 sirf Enable Reading ON.'; }
+  bStat('\u25CF Binance se jod raha hoon\u2026');
+  try {
+    const q = 'timestamp=' + Date.now() + '&recvWindow=5000';
+    const sig = await bHmac(q, BN.s);
+    const r = await fetch('https://api.binance.com/api/v3/account?' + q + '&signature=' + sig, { headers: { 'X-MBX-APIKEY': BN.k } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const m = (d.msg || ('HTTP ' + r.status)).slice(0, 70);
+      bStat('\u2717 ' + m);
+      if (r.status === 451 || /restricted/i.test(m)) return 'Binance ne is location ko block kiya. Koi baat nahi \u2014 live prices to chal rahe hain; asli account ke liye baad me dekhenge.';
+      return 'Binance: ' + m + (r.status === 401 ? ' (key galat/expired \u2014 naya banao)' : '');
+    }
+    const nz = (d.balances || []).filter(b => parseFloat(b.free) + parseFloat(b.locked) > 0);
+    document.getElementById('bnOut').innerHTML = nz.length ? nz.map(b => '<b>' + b.asset + '</b> ' + (parseFloat(b.free) + parseFloat(b.locked)).toFixed(6)).join('<br>') : '(balance 0 \u2014 abhi koi coin nahi)';
+    bStat('\u25CF connected \u2713 ' + nz.length + ' assets');
+    log('\u26E3 Binance connected \u2014 ' + nz.length + ' assets');
+    return 'Binance jud gaya \u2713 ' + nz.length + ' assets: ' + (nz.slice(0, 6).map(b => b.asset).join(', ') || 'sab 0') + '. (Orders abhi bhi paper me \u2014 safe!)';
+  } catch (e) {
+    bStat('\u2717 ' + e.message);
+    return 'Connection fail: ' + e.message + '. Net slow hai? Ya Binance is network se mana kar raha hai.';
+  }
+}
+(function wireBN() {
+  const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  const gv = id => (document.getElementById(id) || {}).value || '';
+  on('bnSave', () => {
+    BN.k = gv('bnKey').trim(); BN.s = gv('bnSec').trim();
+    localStorage.setItem('nexus_bnk', BN.k); localStorage.setItem('nexus_bns', BN.s);
+    bStat(BN.k ? '\u25CF saved \u2713 \u2014 TEST / BALANCE dabao' : '\u25CB khali');
+  });
+  on('bnTest', () => binanceTest().then(m => { if (m) log(m); }));
+  if (BN.k) bStat('\u25CF key set \u2014 TEST / BALANCE dabao');
+})();
+
+function deskTick() {
+  if (!DESK.on) return;
+  STOCKS.forEach(x => {
+    const arr = DESK.candles[x.s] = DESK.candles[x.s] || [];
+    const p = PT.pr[x.s];
+    if (!arr.length) arr.push({ o: p, h: p, l: p, c: p });
+    else { const c = arr[arr.length - 1]; c.h = Math.max(c.h, p); c.l = Math.min(c.l, p); c.c = p; }
+  });
+  DESK.cnt++;
+  if (DESK.cnt % CANDLE_TICKS === 0) {
+    STOCKS.forEach(x => {
+      const arr = DESK.candles[x.s], last = arr[arr.length - 1];
+      arr.push({ o: last.c, h: last.c, l: last.c, c: last.c });
+      if (arr.length > 32) arr.shift();
+    });
+    deskPipeline();
+  }
+}
+function deskPipeline() {
+  deskExits();
+  deskScreen();
+  deskStale();
+  deskRender();
+}
+/* Exit Clerk */
+function deskExits() {
+  for (const sym in DESK.pos) {
+    const t = DESK.pos[sym], arr = DESK.candles[sym]; if (!arr || !arr.length) continue;
+    const close = arr[arr.length - 1].c, price = PT.pr[sym];
+    t.age = (t.age || 0) + 1;
+    let why = null, exit = null;
+    if (close > t.anchor) { why = 'DAILY CLOSE > ANCHOR'; exit = price; }
+    if (!why && price <= t.target) { why = 'TARGET ZONE HIT'; exit = t.target; }
+    if (!why && price >= t.stop) { why = 'STOP HIT'; exit = t.stop; }
+    if (why) {
+      const R = (t.entry - exit) / Math.max(.0001, t.stop - t.entry);
+      DESK.journal.push({ sym, R: +R.toFixed(2), why, at: Date.now() });
+      DESK.equity.push(+((DESK.equity[DESK.equity.length - 1] || 0) + R).toFixed(2));
+      delete DESK.pos[sym];
+      log('\U0001F3AF Exit Clerk: ' + sym + ' closed (' + why + ') \u2192 ' + (R >= 0 ? '+' : '') + R + 'R');
+      Voice.speak('Trade closed on ' + sym + '. ' + (R >= 0 ? 'Profit' : 'Loss') + ' of ' + Math.abs(R).toFixed(1) + ' R.');
+      deskAuditRender();
+    }
+  }
+}
+/* Stale flag */
+function deskStale() {
+  for (const sym in DESK.pos) {
+    const t = DESK.pos[sym];
+    if (t.age === STALE_CANDLES) { t.stale = true; log('\u26A0\uFE0F Auditor: ' + sym + ' STALE \u2014 ' + STALE_CANDLES + ' candles me kuch nahi hua. Aap decide karo.'); toast(sym + ' STALE \u2014 MANUAL DECISION'); }
+  }
+}
+/* Screener: 3-candle short rule */
+function deskScreen() {
+  for (const x of STOCKS) {
+    if (DESK.pos[x.s]) continue;
+    if (DESK.alerts.some(a => a.sym === x.s)) continue;
+    const arr = DESK.candles[x.s]; if (!arr || arr.length < 4) continue;
+    const [c1, c2, c3] = [arr[arr.length - 4], arr[arr.length - 3], arr[arr.length - 2]];
+    const ok = c1.c < c1.o && c2.c < c1.c && c2.h <= c1.h && c3.c < c2.c && c3.h <= c1.h;
+    if (!ok) continue;
+    /* Cartographer: zone */
+    const zlo = +(Math.min(c1.l, c3.h)).toFixed(1), zhi = +(Math.max(c3.c, zlo)).toFixed(1);
+    const anchor = c1.h, stop = +(anchor + (anchor - c3.c) * .6).toFixed(1);
+    /* Risk Officer: 1% cap */
+    const riskAmt = Math.max(1, PT.cap * .01);
+    const perUnit = Math.max(.05, stop - zhi);
+    const size = Math.max(1, Math.floor(riskAmt / perUnit));
+    const target = +(zlo - (stop - zhi) * 1.5).toFixed(1);
+    DESK.alerts.push({ sym: x.s, zlo, zhi, stop, size, risk: +(size * perUnit).toFixed(1), target, anchor, ts: Date.now() });
+    if (DESK.alerts.length > 4) DESK.alerts.shift();
+    log('\U0001F3AF Screener: ' + x.s + ' SHORT setup confirmed \u2014 Gate pe aapka intezaar');
+    Voice.speak('Desk alert. Short setup on ' + x.s + '. Approve or skip.');
+    toast('\U0001F3AF DESK ALERT: ' + x.s + ' SHORT \u2014 APPROVE?');
+  }
+}
+function deskRender() {
+  const box = document.getElementById('deskAlerts'); if (!box) return;
+  box.innerHTML = DESK.alerts.map((a, i) => {
+    const gone = DESK.pos[a.sym] || DESK.alerts.done;
+    return `<div class="item"><b style="color:#ff9d7a">${a.sym} · SHORT (paper)</b>
+      <div class="tt2">zone \u20B9${a.zlo}\u2013${a.zhi} \u00B7 stop \u20B9${a.stop} \u00B7 size ${a.size} \u00B7 risk \u20B9${a.risk} \u00B7 R:R 1:1.5</div>
+      <div class="acts"><button class="mini2" data-da="${i}" style="border-color:rgba(120,230,170,.55);color:#8ff0c4">\u2713 APPROVE</button>
+      <button class="mini2" data-ds="${i}" style="border-color:rgba(255,120,90,.45);color:#ff9d7a">\u2715 SKIP</button></div></div>`;
+  }).join('') || '<div class="hint" style="margin:0">Abhi koi alert nahi \u2014 Screener candle closes pe scan karta hai\u2026</div>';
+  box.querySelectorAll('[data-da]').forEach(b => b.addEventListener('click', () => {
+    const a = DESK.alerts[+b.dataset.da]; if (!a || DESK.pos[a.sym]) return;
+    DESK.pos[a.sym] = { entry: PT.pr[a.sym], stop: a.stop, target: a.target, anchor: a.anchor, size: a.size, age: 0 };
+    DESK.alerts = DESK.alerts.filter(x => x !== a);
+    log('\U0001F680 Gate: ' + a.sym + ' SHORT approved \u2014 ' + a.size + ' units @ \u20B9' + PT.pr[a.sym].toFixed(1));
+    Voice.speak('Approved. Short position opened on ' + a.sym + ' in paper desk.');
+    deskRender();
+  }));
+  box.querySelectorAll('[data-ds]').forEach(b => b.addEventListener('click', () => {
+    DESK.alerts.splice(+b.dataset.ds, 1); deskRender();
+  }));
+}
+function deskStats() {
+  const n = DESK.journal.length;
+  const wins = DESK.journal.filter(t => t.R > 0).length;
+  const wr = n ? (wins / n * 100) : 0;
+  const exp = n ? DESK.journal.reduce((a, b) => a + b.R, 0) / n : 0;
+  let peak = 0, dd = 0;
+  DESK.equity.forEach(v => { peak = Math.max(peak, v); dd = Math.max(dd, peak - v); });
+  return { n, wr, exp, dd };
+}
+function deskReportStr() {
+  const s = deskStats();
+  return `Desk journal: ${s.n} trades, win rate ${s.wr.toFixed(0)}%, expectancy ${s.exp >= 0 ? '+' : ''}${s.exp.toFixed(2)}R, max drawdown ${s.dd.toFixed(1)}R. Target: 40+ trades, 33%+ win rate, +0.4R expectancy, 20R se kam drawdown.`;
+}
+function deskAuditRender() {
+  const el = document.getElementById('deskAudit'); if (!el) return;
+  const s = deskStats();
+  const pass = f => s.n >= 40 ? (f() ? '\u2713' : '\u2717') : '\u23F3';
+  el.innerHTML = `<b style="color:#dceaff">AUDITOR:</b> ${s.n}/40 trades \u00B7 WR ${s.wr.toFixed(0)}% ${pass(() => s.wr >= 33)} (need \u226533%) \u00B7 Exp ${s.exp >= 0 ? '+' : ''}${s.exp.toFixed(2)}R ${pass(() => s.exp >= .4)} (need \u2265+0.4R) \u00B7 MaxDD ${s.dd.toFixed(1)}R ${pass(() => s.dd <= 20)} (need \u226420R)
+    <br>${DESK.pos && Object.keys(DESK.pos).length ? 'Open: ' + Object.keys(DESK.pos).join(', ') + ' \u00B7 ' : ''}Rules pehle se lock \u2014 baad me tune nahi honge. <b>Paper first, money second.</b>`;
+}
+document.getElementById('deskTog').addEventListener('click', function () {
+  Voice.activate();
+  DESK.on = !DESK.on;
+  this.classList.toggle('on', DESK.on);
+  if (DESK.on) {
+    log('\U0001F3AF DESK ON \u2014 Screener/Cartographer/Risk/Gate/Exit/Auditor active (sim)');
+    toast('TRADING DESK ON \U0001F3AF \u2014 ALERTS AAENGE, APPROVE KARNA');
+    Voice.speak('Trading desk on. Six bots active. I will alert you on setups. Only your approval opens a trade.');
+    deskAuditRender();
+  } else { log('\u23F8 desk off \u2014 naye scans band (open paper trades waise hi rahenge)'); toast('DESK OFF'); }
+});
+document.getElementById('deskReset').addEventListener('click', () => {
+  DESK.journal = []; DESK.equity = []; deskSave(); deskAuditRender(); toast('JOURNAL CLEARED');
+});
+document.getElementById('deskHelp').addEventListener('click', () => {
+  chatEl.classList.add('open');
+  typeMsg('NEXUS \u00B7 DESK GUIDE', 'Ye 6-bot trading desk hai: Screener 3-candle rule se turn dhoondta hai, Cartographer zone banata hai, Risk Officer size nikalta hai (1% cap), Gate ke bina aapke APPROVE koi trade nahi hota, Exit Clerk rules se band karta hai, Auditor har trade ka R journal me likhta hai. Pass hone ke liye: 40+ trades, WR 33%+, +0.4R, DD 20R se kam. Ye SIM hai \u2014 real ke liye backend + capital + discipline chahiye.');
+  Voice.speak('This is a six bot trading desk simulation. Screener finds the turn, cartographer maps the zone, risk officer sizes it, the gate waits for your approval, exit clerk closes by rules, and the auditor keeps score.');
+});
+deskAuditRender();
+deskRender();
+
+/* ---------- help ---------- */
+document.getElementById('helpBtn').addEventListener('click', () => {
+  chatEl.classList.add('open');
+  document.getElementById('cinput').focus();
+  typeMsg('NEXUS · SETUP GUIDE',
+    'VOICE ON karne ke liye: 1) Is page ko Chrome me kholo (preview ke bahar ya file download karke). 2) Neeche 🔴 LIVE VOICE dabao. 3) Browser pooche "Allow microphone" → ALLOW dabao. 4) Bas! Ab bolo — "run a self check". Main sununga aur bolkar jawab dunga. 🎙');
+  Voice.speak('To switch on voice: open this page in Chrome, tap Live Voice, then tap Allow microphone. Then just talk to me.');
+});
+
+/* ---------- boot ---------- */
+const BOOT = [
+  'NEXUS core online — kernel 2.4.1',
+  'loading 19 agent profiles … ok',
+  'memory index mounted — 1.2M vectors',
+  'integrations: Drive · Gmail · Calendar · CRM',
+  'trading link: PAPER MODE (simulated — no real money)',
+  '🎙 microphone armed — listening for wake phrase',
+];
+BOOT.forEach((m, i) => setTimeout(() => log(m), 350 + i * 520));
+setTimeout(() => typeMsg('NEXUS · CHIEF OF STAFF',
+  'Evening. All 19 agents are nominal and the self-check suite is green. What should we take on first?'), 1400);
+
+/* ---------- motion: splash + ripple ---------- */
+(function () {
+  const w = document.getElementById('splashWord');
+  if (w) 'NEXUS'.split('').forEach((ch, i) => {
+    const s = document.createElement('span');
+    s.textContent = ch; s.style.animationDelay = (0.12 + i * 0.09) + 's';
+    w.appendChild(s);
+  });
+  const sp = document.getElementById('splash');
+  setTimeout(() => { sp.classList.add('hide'); setTimeout(() => sp.remove(), 900); }, 1750);
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('button.g,.mini,.ccmd');
+    if (!b || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height);
+    const rp = document.createElement('span');
+    rp.className = 'ripple';
+    rp.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
+    b.appendChild(rp); setTimeout(() => rp.remove(), 600);
+  });
+})();
+
+Voice.init();
+/* URL command support: index.html?say=run a self check  (iOS Shortcuts ke liye bhi) */
+{
+  const said = new URLSearchParams(location.search).get('say');
+  if (said) setTimeout(() => { Voice.activate(); handleUtterance(said.slice(0, 200)); }, 1600);
+}
+resize();
+requestAnimationFrame(frame);
+if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can speak now');
+</script>
+</body>
+</html>
