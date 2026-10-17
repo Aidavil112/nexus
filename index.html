@@ -319,7 +319,7 @@
 <body>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">NEXUS Command Deck — free personal AI assistant dashboard with 21 agents and paper trading</h1>
 <nav id="topbar">
-  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v2.9</span>
+  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v3.0</span>
   <button class="tb on" data-v="home">🏠 HOME</button>
   <button class="tb" data-v="trade">📈 TRADE</button>
   <button class="tb" data-v="gmail">📬 GMAIL</button>
@@ -340,7 +340,7 @@
       <div id="tbOut" class="hint" style="white-space:pre-wrap;max-height:300px;overflow:auto">⚡ SCAN dabao — live EMA/RSI/ATR signals + bots ke paper-trades + P/L!</div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 2px 4px">
           <span style="font-size:10px;letter-spacing:2px;color:#ffd94d">📡 AUTO-SIGNALS</span>
-          <span style="font-size:9px;color:#7a8db8">har 5-min auto-scan · naya signal = NEXUS bolega</span>
+          <button class="btn" id="sigTest" style="font-size:10px;padding:3px 10px">🔊 BOLKE DEKHO</button>
         </div>
         <div id="sigFeed" class="hint" style="white-space:pre-wrap;max-height:170px;overflow:auto">📡 auto-scan shuru ho raha…</div>
   <div class="pcard"><h3>REAL CHART (TradingView)</h3>
@@ -3077,6 +3077,11 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
       }
     } catch (err) { if (first) feed.textContent = '📡 signal-server se jud raha… (60s me phir koshish)'; }
   }
+  $('sigTest').addEventListener('click', function () {
+    Voice.activate();
+    log('🤖 bot-assistant voice test (pyttsx3-line, NEXUS-TTS me)');
+    Voice.speak('हेलो, मैं ट्रेडिंग बॉट का असिस्टेंट हूँ। मालिक, बताओ क्या करना है?');
+  });
   sigPoll(true);
   setInterval(sigPoll, 60000);
 })();</script>
