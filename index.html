@@ -454,6 +454,7 @@
     <button class="g" id="btnBrain">🧠 AUTOPILOT</button>
     <button class="g on" id="btnVoice">🎙 VOICE CHAT</button>
     <button class="g" id="btnJ">🤖 NEXUS MODE</button>
+    <button class="g" id="btnShare">📤 SHARE</button>
     <button class="g pwr" id="btnPower">⏻</button>
   </div>
 </div>
@@ -1464,6 +1465,18 @@ setInterval(() => {
   if (holdForTTS && t - (window.lastSpeakAt || 0) > 12000) { holdForTTS = false; log('🔁 watchdog: TTS-stuck clear'); }
   if (!holdForTTS && t > restUntil && t - lastRestartAt > 5000) { lastRestartAt = t; startRec(); log('🔁 watchdog: ear re-open'); }
 }, 4000);
+
+const btnShare = document.getElementById('btnShare');
+btnShare.addEventListener('click', async () => {
+  const data = { title: 'NEXUS — Mera Personal AI', text: 'Mera apna AI assistant NEXUS — bolke baat karo (Hindi/English), FREE!', url: 'https://aidavil112.github.io/nexus/' };
+  try {
+    if (navigator.share) { await navigator.share(data); log('📤 share sheet khula'); }
+    else {
+      await navigator.clipboard.writeText(data.url);
+      toast('LINK COPY ho gaya — WhatsApp me paste karo!'); log('📤 link copied (no share-sheet)');
+    }
+  } catch (e) {}
+});
 
 const btnJ = document.getElementById('btnJ');
 function jApply() {
