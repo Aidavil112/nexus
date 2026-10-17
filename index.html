@@ -453,7 +453,7 @@
     <button class="g" id="btnLive">🔴 LIVE VOICE</button>
     <button class="g" id="btnBrain">🧠 AUTOPILOT</button>
     <button class="g on" id="btnVoice">🎙 VOICE CHAT</button>
-    <button class="g" id="btnJ">🤖 JARVIS</button>
+    <button class="g" id="btnJ">🤖 NEXUS MODE</button>
     <button class="g pwr" id="btnPower">⏻</button>
   </div>
 </div>
@@ -1391,7 +1391,7 @@ function handleUtterance(v) {
       if (!cmd) { log('🤖 wake → "जी सर?"'); Voice.speak('जी सर?'); return; }
       v = cmd;
     } else if (Date.now() > jWindow) {
-      log('🤖 JARVIS mode — wake nahi mila, ignore: ' + v.slice(0, 22));
+      log('🤖 NEXUS mode — wake nahi mila, ignore: ' + v.slice(0, 22));
       return;
     } else { jWindow = Date.now() + 45000; }
   } else if (JARVIS_RE.test(v)) { jWindow = Date.now() + 45000; }
@@ -1452,7 +1452,7 @@ function startRec() {
   try {
     rec.start();
     if (!liveMode) { chatEl.classList.add('open'); document.getElementById('cinput').focus(); }
-    if (jMode && liveMode && deckcap.textContent.indexOf('JARVIS') < 0 && deckcap.textContent.indexOf('SPEAKING') < 0) deckcap.textContent = '🤖 JARVIS — "JARVIS/NEXUS" bolo';
+    if (jMode && liveMode && deckcap.textContent.indexOf('JARVIS') < 0 && deckcap.textContent.indexOf('SPEAKING') < 0) deckcap.textContent = '🤖 NEXUS MODE — "NEXUS" bolo';
   }
   catch (e) { recOn = false; btnVoice.classList.remove('rec'); btnLive.classList.remove('rec'); }
 }
@@ -1469,14 +1469,14 @@ const btnJ = document.getElementById('btnJ');
 function jApply() {
   btnJ.classList.toggle('on', jMode);
   if (S.listening && deckcap.textContent.indexOf('SPEAKING') < 0)
-    deckcap.textContent = jMode ? '🤖 JARVIS — "JARVIS/NEXUS" bolo' : (liveMode ? '🔴 LIVE VOICE' : 'LISTENING');
+    deckcap.textContent = jMode ? '🤖 NEXUS MODE — "NEXUS" bolo' : (liveMode ? '🔴 LIVE VOICE' : 'LISTENING');
 }
 btnJ.addEventListener('click', () => {
   Voice.activate();
   jMode = !jMode;
   try { localStorage.setItem('nexus_jmode', jMode ? '1' : '0'); } catch (e) {}
-  jApply(); toast(jMode ? '🤖 JARVIS MODE — "Jarvis" ya "Nexus" bolo!' : 'JARVIS off — ab sab sunta hai');
-  log(jMode ? '🤖 JARVIS wake-word mode ON (45s follow-up window)' : 'JARVIS mode OFF');
+  jApply(); toast(jMode ? '🤖 NEXUS MODE — "Nexus" bolo!' : 'NEXUS mode off — ab sab sunta hai');
+  log(jMode ? '🤖 NEXUS wake-word mode ON (45s follow-up) — Jarvis-style' : 'NEXUS mode OFF');
 });
 if (jMode) setTimeout(jApply, 900);
 
