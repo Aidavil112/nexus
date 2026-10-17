@@ -383,6 +383,7 @@
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">
         <input id="tutQ" placeholder="jaise: reel kaise post karu?" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none">
         <button class="btn" id="tutAsk">🧠 PUCHHO</button>
+        <button class="btn" id="tutMic">🎙️ BAAT</button>
         <button class="btn" id="tutSay">🔊</button>
       </div>
       <div id="tutOut" class="hint" style="white-space:pre-wrap;max-height:240px;overflow:auto">Puchho kya bhi — NEXUS TUTOR style me guide karega…</div>
@@ -2683,6 +2684,88 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
   $('tutAsk').addEventListener('click', go);
   $('tutSay').addEventListener('click', say);
   $('tutQ').addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+  /* --- 🎙 SIRI/GEMINI-LIVE baat-cheet: bolo → NEXUS sunn ke jawab bole --- */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let bRec = null, bConv = false, bBusy = false, bFails = 0, bTm = null, bErr = '';
+  function pickV() {
+    let v = null;
+    try {
+      const vs = speechSynthesis.getVoices() || [];
+      const fem = /veena|lekha|heera|kalpana|samantha|karen|serena|moira|tessa|zira|neerja|swara|aria|libby/i;
+      v = vs.find(function (x) { return fem.test(x.name); }) || vs.find(function (x) { return /hi[-_]IN/i.test(x.lang); }) || null;
+    } catch (e) {}
+    return v;
+  }
+  function bStart() {
+    if (!SR || bBusy || !bConv) return;
+    try {
+      if (bRec) { try { bRec.abort(); } catch (e) {} }
+      bRec = new SR(); bRec.lang = 'hi-IN'; bRec.interimResults = true; bRec.continuous = false; bRec.maxAlternatives = 1;
+      bRec.onresult = function (ev) {
+        let fin = '';
+        for (let i = ev.resultIndex; i < ev.results.length; i++) if (ev.results[i].isFinal) fin += ev.results[i][0].transcript;
+        if (fin && fin.trim()) { bFails = 0; handleQ(fin.trim().slice(0, 300)); }
+      };
+      bRec.onerror = function (ev) {
+        bErr = ev.error || '';
+        if (bErr === 'not-allowed' || bErr === 'service-not-allowed') { bStop(); out.textContent = '⚠️ MIC permission chahiye — Safari/Settings me allow karo'; if (typeof toast === 'function') toast('MIC ALLOW KARO'); return; }
+        if (bErr === 'aborted' || bErr === 'no-speech' || bErr === 'network') bFails++;
+      };
+      bRec.onend = function () {
+        if (!bConv || bBusy) return;
+        if (bFails > 6) { bStop(); out.textContent += '\n🎙 mic thak gaya — dobara 🎙️ BAAT dabao'; if (typeof toast === 'function') toast('MIC REST — dobara dabao'); return; }
+        if (bTm) clearTimeout(bTm);
+        bTm = setTimeout(bStart, (bErr === 'aborted' || bErr === 'no-speech') ? 1400 : 400);
+      };
+      bRec.start();
+      if (out.textContent.indexOf('NEXUS:') < 0) out.textContent = '🎙️ SUN RAHA HOON… (jaise: reel kaise post karu)';
+    } catch (e) { out.textContent = '⚠️ mic start nahi hua — ' + e.message; }
+  }
+  function bStop() {
+    bConv = false;
+    if (bTm) { clearTimeout(bTm); bTm = null; }
+    if (bRec) { try { bRec.onend = null; bRec.abort(); } catch (e) {} }
+    const m = $('tutMic'); if (m) { m.classList.remove('on'); m.textContent = '🎙️ BAAT'; }
+  }
+  async function handleQ(q) {
+    bBusy = true;
+    out.textContent = 'Tum: ' + q + '\n🧠 NEXUS soch raha hai…';
+    let ans = '';
+    try {
+      const r = await fetch(B + '/brain/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q }) });
+      const d = await r.json();
+      ans = (d && d.answer) ? d.answer : ('⚠️ ' + ((d && d.detail) || 'jawab nahi mila'));
+    } catch (e) { ans = '⚠️ server se connection nahi — ' + e.message; }
+    out.textContent = 'Tum: ' + q + '\n🧠 NEXUS: ' + ans;
+    last = ans;
+    if ('speechSynthesis' in window) {
+      try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(String(ans).slice(0, 700));
+        const v = pickV(); if (v) u.voice = v;
+        u.lang = 'hi-IN'; u.rate = 1.0; u.pitch = 1.05;
+        u.onend = u.onerror = function () { bBusy = false; if (bConv) { if (bTm) clearTimeout(bTm); bTm = setTimeout(bStart, 350); } };
+        speechSynthesis.speak(u);
+      } catch (e) { bBusy = false; if (bConv) bTm = setTimeout(bStart, 350); }
+    } else { bBusy = false; if (bConv) bTm = setTimeout(bStart, 350); }
+  }
+  const mic = $('tutMic');
+  mic.addEventListener('click', function () {
+    if (bConv) { bStop(); out.textContent = '🎙️ baat-cheet band.'; return; }
+    if (!SR) { out.textContent = '⚠️ is browser me mic-sunai nahi — Safari me kholo'; return; }
+    bConv = true; bFails = 0; bBusy = false; mic.classList.add('on'); mic.textContent = '⏹ BAND';
+    const greet = 'Haan bhai! Main sun raha hoon — pucho kya lena hai.';
+    out.textContent = '🧠 NEXUS: ' + greet;
+    if ('speechSynthesis' in window) {
+      try {
+        const u = new SpeechSynthesisUtterance(greet);
+        const v = pickV(); if (v) u.voice = v;
+        u.lang = 'hi-IN'; u.rate = 1.0; u.pitch = 1.05;
+        u.onend = function () { if (bConv) bTm = setTimeout(bStart, 250); };
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      } catch (e) { bTm = setTimeout(bStart, 250); }
+    } else bTm = setTimeout(bStart, 250);
+  });
 })();
 </script>
 </body>
