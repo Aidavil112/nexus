@@ -394,6 +394,14 @@
         <button class="btn" id="tutSay">🔊</button>
       </div>
       <div id="tutOut" class="hint" style="white-space:pre-wrap;max-height:240px;overflow:auto">Puchho kya bhi — NEXUS TUTOR style me guide karega…</div>
+      <div class="csec">🧬 XRAY — WEBSITE KA X-RAY (REA-lite, cloud-server wala)</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">
+        <input id="xu" placeholder="koi bhi website: jaise igloo.inc" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none">
+        <button class="btn" id="xGo">🧬 X-RAY</button>
+        <button class="btn" id="xBuild" style="display:none">🔨 APNA VERSION</button>
+        <a class="btn" id="xPrev" style="display:none;text-decoration:none" target="_blank" rel="noopener">👀</a>
+      </div>
+      <div id="xOut" class="hint" style="white-space:pre-wrap;max-height:280px;overflow:auto">URL daalo — cloud-server khud kholke samjhega: TECH STACK + DESIGN + WOW + apna-version blueprint!</div>
       <div id="brainMove"></div></div></section>
       <section class="view" id="v-orbmap"><div class="vwrap"><div class="vtitle">🪐 NEXUS ORB — CHHUO AUR BAAT KARO</div>
       <canvas id="orbCv" style="width:min(92vw,470px);height:min(92vw,470px);display:block;margin:6px auto;touch-action:none"></canvas>
@@ -2791,7 +2799,8 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
     { n: 'STORE', e: '🛍', q: 'shopify store wala kaam kya hai, ek line me batao' },
     { n: 'GMAIL', e: '📧', q: 'gmail relay kya karta hai, ek line me batao' },
     { n: 'TRADE', e: '📈', q: 'crypto trade tab kya karta hai, ek line me batao' },
-    { n: 'POST', e: '📢', q: 'instagram post NEXUS se kaise hota hai, ek line me' }
+    { n: 'POST', e: '📢', q: 'instagram post NEXUS se kaise hota hai, ek line me' },
+    { n: 'XRAY', e: '🧬', q: 'xray tool kya karta hai, ek line me batao' }
   ];
   NODES.forEach(function (nd, i) { nd.ring = i % 2; nd.spd = (nd.ring ? -0.22 : 0.3) * (1 - i * 0.012); nd.a = (i / NODES.length) * Math.PI * 2; nd.hot = 0; });
   let W = 0, H = 0, sel = -1, busy = false;
@@ -2899,6 +2908,47 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
   });
   const orbT = document.querySelector('[data-v="orbmap"]');
   if (orbT) orbT.addEventListener('click', function () { setTimeout(size, 80); });
+})();
+/* ---------- 🧬 XRAY UI (server /xray — REA-lite) ---------- */
+(function () {
+  const B = 'https://nexus-agent-ycck.onrender.com';
+  const $ = function (id) { return document.getElementById(id); };
+  const out = $('xOut'); if (!out) return;
+  let xid = '', xtm = null;
+  async function poll() {
+    try {
+      const r = await fetch(B + '/xray/' + xid);
+      const d = await r.json();
+      if (d.status === 'done') {
+        out.textContent = '🎯 ' + (d.site || '') + '\n\n' + (d.report || '');
+        if (d.build_url) { $('xPrev').href = B + d.build_url; $('xPrev').style.display = ''; }
+        $('xBuild').style.display = ''; xtm = null; return;
+      }
+      if (d.status === 'error') { out.textContent = '❌ ' + (d.error || 'fail'); xtm = null; return; }
+      if (d.stage === 'build-ready') { out.textContent += '\n\n🔨 APNA VERSION READY — 👀 se kholo!'; $('xPrev').href = B + d.build_url; $('xPrev').style.display = ''; xtm = null; return; }
+      if (d.stage === 'build-fail') { out.textContent += '\n\n❌ build fail: ' + (d.build_err || ''); xtm = null; return; }
+      out.textContent = '🧬 ' + (d.stage || d.status) + '…';
+      xtm = setTimeout(poll, 3500);
+    } catch (e) { out.textContent = '⚠️ ' + e.message; xtm = null; }
+  }
+  $('xGo').addEventListener('click', async function () {
+    const u = ($('xu').value || '').trim();
+    if (!u) { if (typeof toast === 'function') toast('URL DAALO'); return; }
+    out.textContent = '🧬 server ko bhej raha hoon…';
+    try {
+      const r = await fetch(B + '/xray', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: u }) });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.detail || 'fail');
+      xid = d.id; $('xBuild').style.display = 'none'; $('xPrev').style.display = 'none';
+      poll();
+    } catch (e) { out.textContent = '⚠️ ' + e.message; }
+  });
+  $('xBuild').addEventListener('click', async function () {
+    if (!xid) return;
+    $('xBuild').style.display = 'none';
+    try { await fetch(B + '/xray/' + xid + '/build', { method: 'POST' }); } catch (e) {}
+    poll();
+  });
 })();
 </script>
 </body>
