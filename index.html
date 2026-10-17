@@ -1288,7 +1288,7 @@ const Voice = {
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.onvoiceschanged = load;
   },
   pickVoice(lang) {
-    const fem = /veena|lekha|heera|kalpana|samantha|karen|serena|moira|tessa|zira|neerja|swara|aria|libby/i;
+    const fem = /lekha|kajal|swara|nisha|veena|heera|kalpana|neerja|samantha|karen|serena|moira|tessa|aria|libby/i;
     const skip = /rishi|hemant|madhur/i;
     const ok = v => !skip.test(v.name || '');
     const L = lang || 'en-IN';
@@ -1312,12 +1312,13 @@ const Voice = {
       let vi = sel && sel.value !== '' ? +sel.value : -1;
       // Devanagari text → Hindi voice, agar available hai
       if (/[\u0900-\u097F]/.test(text)) {
-        const hi = this.voices.findIndex(v => /^hi/i.test(v.lang || ''));
+        let hi = this.voices.findIndex(v => /^hi/i.test(v.lang || '') && /lekha|kajal|swara|nisha/i.test(v.name || ''));
+        if (hi < 0) hi = this.voices.findIndex(v => /^hi/i.test(v.lang || ''));
         if (hi >= 0) vi = hi;
       }
       if (vi >= 0 && this.voices[vi]) { u.voice = this.voices[vi]; u.lang = this.voices[vi].lang; }
       else u.lang = 'en-IN';
-      u.rate = 1.0; u.pitch = 1.05;
+      u.rate = 0.95; u.pitch = 1.0;
       u.onstart = () => { holdForTTS = true; stopRec(); deckcap.textContent = '🔊 SPEAKING'; };
       u.onend = u.onerror = () => {
         holdForTTS = false;
@@ -1327,7 +1328,7 @@ const Voice = {
       if (this._u) { this._u.onstart = this._u.onend = this._u.onerror = null; }
       speechSynthesis.cancel();
       this._u = u;
-      speechSynthesis.speak(u);
+      window.lastSpeakAt = Date.now(); speechSynthesis.speak(u);
     } catch (e) {}
   },
   activate() {
@@ -1364,7 +1365,7 @@ let rec = null, recOn = false, liveMode = false, holdForTTS = false, restartTm =
 const btnVoice = document.getElementById('btnVoice');
 const btnLive  = document.getElementById('btnLive');
 const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-let lastEarErr = '', earFails = 0, lastRestartAt = 0;
+let lastEarErr = '', earFails = 0, lastRestartAt = 0, restUntil = 0;
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function noSTT() {
   if (IS_IOS) {
@@ -1422,9 +1423,10 @@ function startRec() {
       earFails = (t - lastRestartAt < 4000) ? earFails + 1 : 0;
       lastRestartAt = t;
       if (earFails > 6) {
-        earFails = 0; liveMode = false; btnLive.classList.remove('on');
-        toast('LIVE VOICE thak gaya — dobara 🔴 LIVE dabaao');
-        log('⏸ live loop rest (iOS mic churn) — LIVE dabao phir se');
+        earFails = 0; restUntil = Date.now() + 25000;
+        toast('LIVE VOICE 25s rest — phir khud shuru 🔄');
+        log('⏸ live rest 25s (iOS mic churn) — auto-resume');
+        restartTm = setTimeout(startRec, 25000);
         return;
       }
       restartTm = setTimeout(startRec, (lastEarErr === 'aborted' || lastEarErr === 'no-speech') ? 1400 : 350);
@@ -1437,6 +1439,13 @@ function startRec() {
   catch (e) { recOn = false; btnVoice.classList.remove('rec'); btnLive.classList.remove('rec'); }
 }
 function stopRec() { if (rec) { try { rec.stop(); } catch (e) {} } }
+/* live keepalive watchdog — TTS-stuck / any stall auto-heal (ruk-rahaha fix) */
+setInterval(() => {
+  if (!liveMode || recOn) return;
+  const t = Date.now();
+  if (holdForTTS && t - (window.lastSpeakAt || 0) > 12000) { holdForTTS = false; log('🔁 watchdog: TTS-stuck clear'); }
+  if (!holdForTTS && t > restUntil && t - lastRestartAt > 5000) { lastRestartAt = t; startRec(); log('🔁 watchdog: ear re-open'); }
+}, 4000);
 
 btnVoice.addEventListener('click', () => {
   Voice.activate();
@@ -2686,10 +2695,10 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
     try {
       const u = new SpeechSynthesisUtterance(String(last).slice(0, 600));
       const vs = speechSynthesis.getVoices() || [];
-      const fem = /veena|lekha|heera|kalpana|samantha|karen|serena|moira|tessa|zira|neerja|swara|aria|libby/i;
-      const v = vs.find(function (x) { return fem.test(x.name); }) || vs.find(function (x) { return /hi[-_]IN/i.test(x.lang); });
+      const fem = /lekha|kajal|swara|nisha|veena|heera|kalpana|neerja|samantha|karen|serena|moira|tessa|aria|libby/i;
+      const v = vs.find(function (x) { return /hi/i.test(x.lang || '') && fem.test(x.name); }) || vs.find(function (x) { return /hi[-_]IN/i.test(x.lang || ''); }) || vs.find(function (x) { return fem.test(x.name); });
       if (v) u.voice = v;
-      u.lang = 'hi-IN'; u.rate = 1.0; u.pitch = 1.05;
+      u.lang = 'hi-IN'; u.rate = 0.95; u.pitch = 1.0;
       speechSynthesis.cancel(); speechSynthesis.speak(u);
     } catch (e) {}
   }
@@ -2715,7 +2724,7 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
     let v = null;
     try {
       const vs = speechSynthesis.getVoices() || [];
-      const fem = /veena|lekha|heera|kalpana|samantha|karen|serena|moira|tessa|zira|neerja|swara|aria|libby/i;
+      const fem = /lekha|kajal|swara|nisha|veena|heera|kalpana|neerja|samantha|karen|serena|moira|tessa|aria|libby/i;
       v = vs.find(function (x) { return fem.test(x.name); }) || vs.find(function (x) { return /hi[-_]IN/i.test(x.lang); }) || null;
     } catch (e) {}
     return v;
@@ -2737,7 +2746,7 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
       };
       bRec.onend = function () {
         if (!bConv || bBusy) return;
-        if (bFails > 6) { bStop(); out.textContent += '\n🎙 mic thak gaya — dobara 🎙️ BAAT dabao'; if (typeof toast === 'function') toast('MIC REST — dobara dabao'); return; }
+        if (bFails > 6) { bFails = 0; if (typeof toast === 'function') toast('LIVE 25s rest — phir khud shuru 🔄'); if (bTm) clearTimeout(bTm); bTm = setTimeout(bStart, 25000); return; }
         if (bTm) clearTimeout(bTm);
         bTm = setTimeout(bStart, (bErr === 'aborted' || bErr === 'no-speech') ? 1400 : 400);
       };
@@ -2767,7 +2776,7 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
         speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(String(ans).slice(0, 700));
         const v = pickV(); if (v) u.voice = v;
-        u.lang = 'hi-IN'; u.rate = 1.0; u.pitch = 1.05;
+        u.lang = 'hi-IN'; u.rate = 0.95; u.pitch = 1.0;
         u.onend = u.onerror = function () { bBusy = false; if (bConv) { if (bTm) clearTimeout(bTm); bTm = setTimeout(bStart, 350); } };
         speechSynthesis.speak(u);
       } catch (e) { bBusy = false; if (bConv) bTm = setTimeout(bStart, 350); }
@@ -2784,7 +2793,7 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
       try {
         const u = new SpeechSynthesisUtterance(greet);
         const v = pickV(); if (v) u.voice = v;
-        u.lang = 'hi-IN'; u.rate = 1.0; u.pitch = 1.05;
+        u.lang = 'hi-IN'; u.rate = 0.95; u.pitch = 1.0;
         u.onend = function () { if (bConv) bTm = setTimeout(bStart, 250); };
         speechSynthesis.cancel(); speechSynthesis.speak(u);
       } catch (e) { bTm = setTimeout(bStart, 250); }
@@ -2865,8 +2874,8 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
   function pickV() {
     try {
       const vs = speechSynthesis.getVoices() || [];
-      const fem = /veena|lekha|heera|kalpana|samantha|karen|serena|moira|tessa|zira|neerja|swara|aria|libby/i;
-      return vs.find(function (x) { return fem.test(x.name); }) || vs.find(function (x) { return /hi[-_]IN/i.test(x.lang); }) || null;
+      const fem = /lekha|kajal|swara|nisha|veena|heera|kalpana|neerja|samantha|karen|serena|moira|tessa|aria|libby/i;
+      return vs.find(function (x) { return /hi/i.test(x.lang || '') && fem.test(x.name); }) || vs.find(function (x) { return /hi[-_]IN/i.test(x.lang || ''); }) || vs.find(function (x) { return fem.test(x.name); }) || null;
     } catch (e) { return null; }
   }
   function speakIt(txt) {
@@ -2874,7 +2883,7 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
     try {
       const u = new SpeechSynthesisUtterance(String(txt).slice(0, 450));
       const v = pickV(); if (v) u.voice = v;
-      u.lang = 'hi-IN'; u.rate = 1.0; u.pitch = 1.05;
+      u.lang = 'hi-IN'; u.rate = 0.95; u.pitch = 1.0;
       speechSynthesis.cancel(); speechSynthesis.speak(u);
     } catch (e) {}
   }
