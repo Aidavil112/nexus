@@ -33,6 +33,7 @@
   <div class="row">
     <button class="b" id="bLang">हिं</button>
     <button class="b" id="bJ">🤖 NEXUS MODE</button>
+    <button class="b" id="bEcho">🦜 ECHO</button>
     <button class="b on" id="bMute">🔊</button>
   </div>
   <button id="mic" title="LIVE ON/OFF">🎤</button>
@@ -45,7 +46,7 @@
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const $ = id => document.getElementById(id);
   const mic = $('mic'), stat = $('stat'), log = $('log');
-  let rec = null, live = false, hold = false, jMode = false, mute = false, lang = 'hi-IN';
+  let rec = null, live = false, hold = false, jMode = false, mute = false, lang = 'hi-IN', echo = false;
   let fails = 0, lastRestart = 0, restUntil = 0, greeted = false, busy = false, jWindow = 0;
   try { jMode = localStorage.getItem('nl_j') === '1'; lang = localStorage.getItem('nl_lang') || 'hi-IN'; mute = localStorage.getItem('nl_mute') === '1'; } catch (e) {}
   const WAKE = /nexus|jarvis|नेक्सस|जार्विस|जर्विस|निकस/i;
@@ -91,6 +92,7 @@
     rec = new SR(); rec.lang = lang; rec.interimResults = false; rec.maxAlternatives = 1;
     rec.onresult = e => {
       const t = (e.results[0][0].transcript || '').trim(); if (!t) return;
+      if (echo) { stat.textContent = '🦜 आपने कहा: ' + t; speak('आपने कहा: ' + t); return; }
       if (live && jMode) {
         if (!WAKE.test(t)) {
           if (Date.now() > jWindow) { stat.textContent = '🤖 "NEXUS" bolo pehle…'; return; }
@@ -133,6 +135,7 @@
   $('bMute').classList.toggle('on', false);
   $('bLang').addEventListener('click', () => { lang = lang === 'hi-IN' ? 'en-IN' : 'hi-IN'; $('bLang').textContent = lang === 'hi-IN' ? 'हिं' : 'EN'; save(); stat.textContent = lang === 'hi-IN' ? 'अब हिंदी सुनूंगा' : 'Now listening English'; });
   $('bJ').addEventListener('click', () => { jMode = !jMode; $('bJ').classList.toggle('on', jMode); save(); stat.textContent = jMode ? '🤖 NEXUS MODE — "NEXUS" bolo' : 'Sab sunta hai (wake off)'; });
+  $('bEcho').addEventListener('click', () => { echo = !echo; $('bEcho').classList.toggle('on', echo); stat.textContent = echo ? '🦜 ECHO ON — bolo, wahi wapas sunaunga' : '🧠 wapas NEXUS-brain'; });
   $('bMute').addEventListener('click', () => { mute = !mute; $('bMute').textContent = mute ? '🔇' : '🔊'; save(); if (mute) { try { speechSynthesis.cancel(); } catch (e) {} } });
 
   /* signal-announce (jaise full-agent me) */
