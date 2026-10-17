@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="hi-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NEXUS LITE — Bolke Baat</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; background: #070d1f; color: #e8f0ff; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+         display: flex; flex-direction: column; align-items: center; padding: 34px 18px 40px; }
+  .brand { font-size: 30px; font-weight: 800; letter-spacing: 6px; color: #ffd94d; text-shadow: 0 0 18px rgba(255,217,77,.35); }
+  .sub { font-size: 12px; color: #9fb8e8; margin: 6px 0 26px; letter-spacing: 1px; }
+  #mic { width: 148px; height: 148px; border-radius: 50%; border: 3px solid #2a3c68; background: radial-gradient(circle at 35% 30%, #16233f, #0b1428);
+         font-size: 56px; cursor: pointer; transition: all .25s; box-shadow: 0 0 30px rgba(30,60,120,.35); }
+  #mic.on { border-color: #ff5a5a; box-shadow: 0 0 44px rgba(255,90,90,.5); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 60px rgba(255,90,90,.75); } }
+  #stat { margin: 18px 0 8px; font-size: 13px; color: #ffd94d; letter-spacing: 2px; min-height: 18px; }
+  .hint { font-size: 11px; color: #7a8db8; margin-bottom: 20px; text-align: center; }
+  #log { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 10px; }
+  .bub { padding: 11px 14px; border-radius: 14px; font-size: 14px; line-height: 1.45; max-width: 88%; white-space: pre-wrap; }
+  .you { align-self: flex-end; background: #14224a; border: 1px solid #2a3c68; }
+  .nx  { align-self: flex-start; background: #0d1f16; border: 1px solid #1d4a35; color: #d9ffe9; }
+  .foot { margin-top: 26px; font-size: 10px; color: #55688f; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="brand">N E X U S</div>
+  <div class="sub">LITE · bolke baat karo · Hindi/English</div>
+  <button id="mic" title="dabao aur bolo">🎤</button>
+  <div id="stat">TAP KARO AUR BOLO</div>
+  <div class="hint">pehli baar mic-permission maangega — Allow karna</div>
+  <div id="log"></div>
+  <div class="foot">NEXUS-LITE · aidavil112.github.io/nexus · full version: <b>/nexus</b></div>
+<script>
+  const BASE = 'https://nexus-agent-ycck.onrender.com';
+  const mic = document.getElementById('mic'), stat = document.getElementById('stat'), log = document.getElementById('log');
+  let rec = null, busy = false, spoke = false;
+
+  const FEM = /lekha|kajal|swara|nisha|veena|heera|kalpana|neerja|samantha|karen|serena|moira|tessa|aria|libby/i;
+  function speak(t) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(String(t).replace(/[*_`#]/g, ' ').slice(0, 500));
+      const vs = speechSynthesis.getVoices() || [];
+      const v = vs.find(x => /hi/i.test(x.lang || '') && FEM.test(x.name)) || vs.find(x => /hi[-_]IN/i.test(x.lang || '')) || vs.find(x => FEM.test(x.name));
+      if (v) u.voice = v;
+      u.lang = v ? v.lang : 'hi-IN'; u.rate = 0.95; u.pitch = 1.0;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function add(cls, txt) { const d = document.createElement('div'); d.className = 'bub ' + cls; d.textContent = txt; log.appendChild(d); window.scrollTo(0, document.body.scrollHeight); }
+
+  async function ask(q) {
+    busy = true; stat.textContent = '🧠 NEXUS soch raha hai…';
+    add('you', q);
+    try {
+      const r = await fetch(BASE + '/brain/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q.slice(0, 300) }) });
+      const d = await r.json();
+      if (!d.answer) throw new Error(d.detail || 'jawab nahi mila');
+      add('nx', d.answer);
+      speak(d.answer);
+    } catch (e) {
+      const m = 'Server jag raha hai (free-tier, 50s lagte hain) — 1 min me phir tap karo, Sir.';
+      add('nx', m); speak(m);
+    }
+    busy = false;
+  }
+
+  mic.addEventListener('click', () => {
+    if (busy) return;
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      stat.textContent = 'Ye browser sun nahi sakta — Safari/Chrome use karo'; return;
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    try { if (rec) { try { rec.stop(); } catch (e) {} } } catch (e) {}
+    rec = new SR(); rec.lang = 'hi-IN'; rec.interimResults = false; rec.maxAlternatives = 1;
+    if (!spoke) { speak('नमस्ते, मैं NEXUS हूँ। बताइए?'); spoke = true; }
+    rec.onstart = () => { mic.classList.add('on'); stat.textContent = '🔴 SUN RAHA HUN — BOLO…'; };
+    rec.onerror = ev => { mic.classList.remove('on'); stat.textContent = ev.error === 'not-allowed' ? 'MIC PERMISSION chahiye (Allow karo)' : 'phir se 🎤 dabao'; };
+    rec.onend = () => { mic.classList.remove('on'); if (stat.textContent.indexOf('BOLO') >= 0) stat.textContent = 'TAP KARO AUR BOLO'; };
+    rec.onresult = e => { const t = e.results[0][0].transcript.trim(); if (t) ask(t); };
+    try { rec.start(); } catch (e) { stat.textContent = 'phir se 🎤 dabao'; }
+  });
+</script>
+</body>
+</html>
