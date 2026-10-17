@@ -323,6 +323,7 @@
   <button class="tb" data-v="editor">✂ EDITOR</button>
   <button class="tb" data-v="brain">🧠 BRAIN</button>
   <button class="tb" data-v="video">🎬 VIDEO</button>
+  <button class="tb" data-v="orbmap">🪐 ORB</button>
 </nav>
 <section class="view" id="v-trade"><div class="vwrap"><div class="vtitle">📈 TRADING — REAL CHART · PAPER ORDERS · JOURNAL</div>
   <div class="pcard"><h3>REAL CHART (TradingView)</h3>
@@ -388,6 +389,9 @@
       </div>
       <div id="tutOut" class="hint" style="white-space:pre-wrap;max-height:240px;overflow:auto">Puchho kya bhi — NEXUS TUTOR style me guide karega…</div>
       <div id="brainMove"></div></div></section>
+      <section class="view" id="v-orbmap"><div class="vwrap"><div class="vtitle">🪐 NEXUS ORB — CHHUO AUR BAAT KARO</div>
+      <canvas id="orbCv" style="width:min(92vw,470px);height:min(92vw,470px);display:block;margin:6px auto;touch-action:none"></canvas>
+      <div id="orbCap" class="hint" style="text-align:center;min-height:56px;white-space:pre-wrap">🪐 Orb ya kisi bhi node ko CHHUO — NEXUS awaz me jawab dega!</div></div></section>
 <canvas id="bg" role="img" aria-label="Animated starfield background"></canvas>
 <canvas id="scene" role="img" aria-label="Interactive map of 21 AI agents connected to the central NEXUS orb"></canvas>
 <div class="vignette"></div>
@@ -2766,6 +2770,129 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
       } catch (e) { bTm = setTimeout(bStart, 250); }
     } else bTm = setTimeout(bStart, 250);
   });
+})();
+/* ---------- 🪐 NEXUS ORB MAP (Apex-style — chhuo aur baat karo) ---------- */
+(function () {
+  const cv = document.getElementById('orbCv');
+  const cap = document.getElementById('orbCap');
+  if (!cv || !cap) return;
+  const sec = document.getElementById('v-orbmap');
+  const ctx = cv.getContext('2d');
+  const NODES = [
+    { n: 'BRAIN', e: '🧠', q: 'bhai brain module kya karta hai, ek line me batao' },
+    { n: 'VIDEO', e: '🎬', q: 'video agent se reel kaise banti hai, ek line me batao' },
+    { n: 'FOOTAGE', e: '📼', q: 'apni video daal ke reel kaise banti hai, ek line me' },
+    { n: 'STORE', e: '🛍', q: 'shopify store wala kaam kya hai, ek line me batao' },
+    { n: 'GMAIL', e: '📧', q: 'gmail relay kya karta hai, ek line me batao' },
+    { n: 'TRADE', e: '📈', q: 'crypto trade tab kya karta hai, ek line me batao' },
+    { n: 'POST', e: '📢', q: 'instagram post NEXUS se kaise hota hai, ek line me' }
+  ];
+  NODES.forEach(function (nd, i) { nd.ring = i % 2; nd.spd = (nd.ring ? -0.22 : 0.3) * (1 - i * 0.012); nd.a = (i / NODES.length) * Math.PI * 2; nd.hot = 0; });
+  let W = 0, H = 0, sel = -1, busy = false;
+  function size() {
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = r.width; H = r.height;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', size); setTimeout(size, 60);
+  function nodePos(nd, t) {
+    const cx = W / 2, cy = H / 2, R = Math.min(W, H);
+    const rad = (nd.ring ? 0.33 : 0.21) * R;
+    return { x: cx + Math.cos(nd.a + t * nd.spd) * rad, y: cy + Math.sin(nd.a + t * nd.spd) * rad };
+  }
+  function draw(ts) {
+    requestAnimationFrame(draw);
+    if (!sec || !sec.classList.contains('active') || !W) return;
+    const t = ts / 1000;
+    const cx = W / 2, cy = H / 2, R = Math.min(W, H);
+    ctx.clearRect(0, 0, W, H);
+    const pulse = 1 + Math.sin(t * 2.1) * 0.045;
+    for (const nd of NODES) {
+      const p = nodePos(nd, t);
+      ctx.strokeStyle = 'rgba(80,190,255,' + (0.30 + nd.hot * 0.4) + ')';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p.x, p.y); ctx.stroke();
+    }
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, R * 0.115 * pulse);
+    g.addColorStop(0, 'rgba(210,245,255,0.98)'); g.addColorStop(0.45, 'rgba(70,180,255,0.75)'); g.addColorStop(1, 'rgba(20,60,140,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.115 * pulse, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,205,80,' + (0.75 + Math.sin(t * 2.1) * 0.2) + ')';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.128 * pulse, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#eaf6ff'; ctx.font = '700 ' + Math.round(R * 0.045) + 'px system-ui';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('NEXUS', cx, cy + R * 0.155);
+    for (let i = 0; i < NODES.length; i++) {
+      const nd = NODES[i]; const p = nodePos(nd, t);
+      const rr = R * (0.030 + nd.hot * 0.012);
+      const gg = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, rr * 2.6);
+      gg.addColorStop(0, nd.hot > 0 ? 'rgba(255,215,120,0.95)' : 'rgba(120,215,255,0.9)'); gg.addColorStop(1, 'rgba(30,90,180,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr * 2.6, 0, 7); ctx.fill();
+      ctx.font = Math.round(R * 0.052) + 'px system-ui';
+      ctx.fillText(nd.e, p.x, p.y);
+      ctx.fillStyle = 'rgba(240,250,255,0.95)';
+      ctx.font = '600 ' + Math.round(R * 0.033) + 'px system-ui';
+      ctx.fillText(nd.n, p.x, p.y + rr * 2.2);
+      if (nd.hot > 0) nd.hot = Math.max(0, nd.hot - 0.008);
+    }
+  }
+  requestAnimationFrame(draw);
+  function pickV() {
+    try {
+      const vs = speechSynthesis.getVoices() || [];
+      const fem = /veena|lekha|heera|kalpana|samantha|karen|serena|moira|tessa|zira|neerja|swara|aria|libby/i;
+      return vs.find(function (x) { return fem.test(x.name); }) || vs.find(function (x) { return /hi[-_]IN/i.test(x.lang); }) || null;
+    } catch (e) { return null; }
+  }
+  function speakIt(txt) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(String(txt).slice(0, 450));
+      const v = pickV(); if (v) u.voice = v;
+      u.lang = 'hi-IN'; u.rate = 1.0; u.pitch = 1.05;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  async function ask(nd, i) {
+    if (busy) return;
+    busy = true; sel = i; nd.hot = 1;
+    cap.textContent = nd.e + ' ' + nd.n + '\n🧠 NEXUS soch raha hai…';
+    let ans = '';
+    try {
+      const r = await fetch('https://nexus-agent-ycck.onrender.com/brain/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: nd.q }) });
+      const d = await r.json();
+      ans = (d && d.answer) ? d.answer : ((d && d.detail) ? '⚠️ ' + d.detail : '⚠️ jawab nahi mila');
+    } catch (e) { ans = '⚠️ server se connection nahi — ' + e.message; }
+    cap.textContent = nd.e + ' ' + nd.n + '\n🧠 NEXUS: ' + ans;
+    speakIt(ans);
+    busy = false;
+  }
+  function greet() {
+    if (busy) return;
+    cap.textContent = '🧠 NEXUS: Haan bhai! Main NEXUS hoon — kisi bhi node ko chhuo, main bol ke bataunga wo kya karta hai!';
+    speakIt('Haan bhai! Main NEXUS hoon. Kisi bhi node ko chhuo, main bol ke bataunga wo kya karta hai.');
+  }
+  cv.addEventListener('pointerdown', function (ev) {
+    ev.preventDefault();
+    const r = cv.getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    const R = Math.min(W, H), cx = W / 2, cy = H / 2;
+    if (Math.hypot(x - cx, y - cy) < R * 0.15) { greet(); return; }
+    const t = performance.now() / 1000;
+    let best = -1, bd = 1e9;
+    for (let i = 0; i < NODES.length; i++) {
+      const p = nodePos(NODES[i], t);
+      const d = Math.hypot(x - p.x, y - p.y);
+      if (d < R * 0.10 && d < bd) { bd = d; best = i; }
+    }
+    if (best >= 0) ask(NODES[best], best);
+  });
+  const orbT = document.querySelector('[data-v="orbmap"]');
+  if (orbT) orbT.addEventListener('click', function () { setTimeout(size, 80); });
 })();
 </script>
 </body>
