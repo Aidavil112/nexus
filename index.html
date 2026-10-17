@@ -319,7 +319,7 @@
 <body>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">NEXUS Command Deck — free personal AI assistant dashboard with 21 agents and paper trading</h1>
 <nav id="topbar">
-  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v3.0</span>
+  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v3.1</span>
   <button class="tb on" data-v="home">🏠 HOME</button>
   <button class="tb" data-v="trade">📈 TRADE</button>
   <button class="tb" data-v="gmail">📬 GMAIL</button>
@@ -331,6 +331,7 @@
   <button class="tb" data-v="video">🎬 VIDEO</button>
   <button class="tb" data-v="orbmap">🪐 ORB</button>
 </nav>
+<div id="skBar" style="display:none;gap:6px;overflow-x:auto;padding:5px 10px"></div>
 <section class="view" id="v-trade"><div class="vwrap"><div class="vtitle">📈 TRADING — REAL CHART · PAPER ORDERS · JOURNAL</div>
       <div class="csec">🧠 TRADE-BRAIN — 6 AI BOTS (paper-trading + self-learning · BINA real paisa)</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">
@@ -437,12 +438,21 @@
   <div class="hr">
     <button class="g" id="ctrBtn">☰ CONTROL</button>
     <button class="g" id="selfChk">⚙ SELF-CHECK</button>
+    <button class="g" id="skBtn">🧩 SKILLS</button>
     <button class="g" id="helpBtn">❓ HELP</button>
     <button class="g" id="lvTop">🔴 LIVE</button>
     <button class="g" id="chatBtn">CHAT ▾</button>
   </div>
 </header>
 
+<div id="skPanel" style="display:none;position:fixed;inset:0;background:rgba(3,6,16,.94);z-index:9999;padding:16px;overflow:auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #223;padding-bottom:8px">
+    <span style="color:#ffd94d;font-size:13px;letter-spacing:2px">🧩 NEXUS · SKILLS &amp; APPS</span>
+    <button id="skClose" style="background:none;border:1px solid #334;color:#9fb8e8;border-radius:8px;padding:4px 10px">✕</button>
+  </div>
+  <div style="font-size:10px;color:#7a8db8;margin:8px 0 12px">📌 PIN = home-par shortcut · ✏️ = naam badlo · row-tap = us skill par jump</div>
+  <div id="skList" style="display:flex;flex-direction:column;gap:8px"></div>
+</div>
 <aside id="voices">
   <h3>VOICE IDENTITY</h3>
   <ul id="vlist"></ul>
@@ -3084,6 +3094,82 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
   });
   sigPoll(true);
   setInterval(sigPoll, 60000);
+})();
+/* ---------- 🧩 SKILLS & APPS manager (pin/rename/jump) ---------- */
+(function () {
+  const SKILLS = [
+    { id: 'brain',   e: '🧠', n: 'BRAIN / AUTOPILOT',  tab: 'brain',   st: 'LIVE' },
+    { id: 'trade',   e: '📈', n: 'TRADE-BRAIN (6 bots)', tab: 'trade',  st: 'LIVE' },
+    { id: 'autosig', e: '📡', n: 'AUTO-SIGNALS (5-min)', tab: 'trade',  st: 'LIVE' },
+    { id: 'voice',   e: '🎙', n: 'LIVE VOICE + awaz',  tab: null,      st: 'LIVE' },
+    { id: 'nmode',   e: '🤖', n: 'NEXUS MODE (wake)',  tab: null,      st: 'LIVE' },
+    { id: 'video',   e: '🎬', n: 'VIDEO/FOOTAGE agent', tab: 'video',  st: 'DEP' },
+    { id: 'xray',    e: '🧬', n: 'XRAY website-clone', tab: 'trade',   st: 'LIVE' },
+    { id: 'shopify', e: '🛍', n: 'SHOPIFY + PostZen',  tab: 'shopify', st: 'LIVE' },
+    { id: 'orb',     e: '🪐', n: 'ORB 20-agent map',   tab: 'orbmap',  st: 'LIVE' },
+    { id: 'mcp',     e: '🤝', n: 'DIGEN MCP-bridge',   tab: null,      st: 'LIVE' },
+    { id: 'gmail',   e: '📨', n: 'GMAIL relay',        tab: 'gmail',   st: 'PARK' },
+    { id: 'exapi',   e: '🔐', n: 'EXCHANGE API (real)', tab: 'binance', st: 'WAIT' }
+  ];
+  const STC = { LIVE: ['#0d2f1c', '#4d8', 'LIVE'], DEP: ['#0a2030', '#5bc2e7', 'DEPLOY PENDING'], PARK: ['#30230a', '#e7a23c', 'PARKED'], WAIT: ['#2a2408', '#ffd94d', 'KEY WAITING'] };
+  let cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem('nexus_skills') || '{}'); } catch (e) { cfg = {}; }
+  function save() { try { localStorage.setItem('nexus_skills', JSON.stringify(cfg)); } catch (e) {} }
+  const $ = function (id) { return document.getElementById(id); };
+  function jump(tab) {
+    if (!tab) return;
+    const t = document.querySelector('.tb[data-v="' + tab + '"]');
+    if (t) t.click();
+    $('skPanel').style.display = 'none';
+  }
+  function chip(st) {
+    const c = STC[st] || STC.LIVE;
+    return '<span style="font-size:8.5px;background:' + c[0] + ';color:' + c[1] + ';border:1px solid ' + c[1] + '44;border-radius:6px;padding:1px 6px;white-space:nowrap">' + c[2] + '</span>';
+  }
+  function render() {
+    const list = $('skList'), bar = $('skBar');
+    if (!list) return;
+    list.innerHTML = SKILLS.map(function (s) {
+      const c = cfg[s.id] || {};
+      const nm = c.n || s.n;
+      const pin = c.pin ? '📌' : '📍';
+      return '<div data-sk="' + s.id + '" style="display:flex;align-items:center;gap:8px;background:#0c1526;border:1px solid #22345c;border-radius:12px;padding:10px 12px">' +
+        '<span style="font-size:18px">' + s.e + '</span>' +
+        '<b style="flex:1;font-size:13px;color:#e8f0ff">' + nm + '</b>' + chip(s.st) +
+        '<button data-act="pin" style="background:none;border:none;font-size:15px">' + pin + '</button>' +
+        '<button data-act="ren" style="background:none;border:none;font-size:13px">✏️</button></div>';
+    }).join('');
+    const pinned = SKILLS.filter(function (s) { return cfg[s.id] && cfg[s.id].pin; });
+    bar.style.display = pinned.length ? 'flex' : 'none';
+    bar.innerHTML = pinned.map(function (s) {
+      return '<button data-jump="' + s.id + '" style="flex-shrink:0;background:#101c38;border:1px solid #2a3c68;color:#dbe6ff;border-radius:8px;padding:4px 10px;font-size:11px">' + s.e + ' ' + ((cfg[s.id].n || s.n).split(' ')[0]) + '</button>';
+    }).join('');
+  }
+  const listEl = $('skList');
+  listEl.addEventListener('click', function (ev) {
+    const btn = ev.target.closest('button[data-act]');
+    const row = ev.target.closest('div[data-sk]');
+    if (!row) return;
+    const id = row.getAttribute('data-sk');
+    const s = SKILLS.find(function (x) { return x.id === id; });
+    if (btn) {
+      const act = btn.getAttribute('data-act');
+      if (act === 'pin') { cfg[id] = cfg[id] || {}; cfg[id].pin = !cfg[id].pin; save(); render(); return; }
+      if (act === 'ren') {
+        const nn = prompt('Naya naam (' + s.e + '):', (cfg[id] && cfg[id].n) || s.n);
+        if (nn && nn.trim()) { cfg[id] = cfg[id] || {}; cfg[id].n = nn.trim().slice(0, 30); save(); render(); }
+        return;
+      }
+    }
+    jump(s.tab);
+  });
+  $('skBar').addEventListener('click', function (ev) {
+    const b = ev.target.closest('button[data-jump]');
+    if (b) jump((SKILLS.find(function (x) { return x.id === b.getAttribute('data-jump'); }) || {}).tab);
+  });
+  $('skBtn').addEventListener('click', function () { $('skPanel').style.display = 'block'; render(); });
+  $('skClose').addEventListener('click', function () { $('skPanel').style.display = 'none'; });
+  render();
 })();</script>
 </body>
 </html>
