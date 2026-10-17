@@ -378,7 +378,15 @@
     <p style="font-size:11px;color:var(--dim);line-height:1.8">Cut · music · text · 10 Hollywood looks · export. Editor alag page par khulta hai:</p>
     <div class="prow2" style="margin-top:10px"><button class="mini" id="openCut" style="border-color:rgba(255,205,90,.6);color:var(--gold)">✂ EDITOR KHOLDO</button></div>
   </div></div></section>
-<section class="view" id="v-brain"><div class="vwrap"><div class="vtitle">🧠 REAL BRAIN — GEMINI SETUP</div><div id="brainMove"></div></div></section>
+<section class="view" id="v-brain"><div class="vwrap"><div class="vtitle">🧠 BRAIN — TUTOR MODE + GEMINI SETUP</div>
+      <div class="csec">🧠 TUTOR-BRAIN — NEXUS SE PUCHHO (server ka dimaag — key nahi chahiye)</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">
+        <input id="tutQ" placeholder="jaise: reel kaise post karu?" style="flex:1;min-width:0;background:rgba(12,24,50,.7);border:1px solid var(--line);color:var(--text);font:inherit;font-size:10px;border-radius:8px;padding:7px;outline:none">
+        <button class="btn" id="tutAsk">🧠 PUCHHO</button>
+        <button class="btn" id="tutSay">🔊</button>
+      </div>
+      <div id="tutOut" class="hint" style="white-space:pre-wrap;max-height:240px;overflow:auto">Puchho kya bhi — NEXUS TUTOR style me guide karega…</div>
+      <div id="brainMove"></div></div></section>
 <canvas id="bg" role="img" aria-label="Animated starfield background"></canvas>
 <canvas id="scene" role="img" aria-label="Interactive map of 21 AI agents connected to the central NEXUS orb"></canvas>
 <div class="vignette"></div>
@@ -2640,6 +2648,41 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
     const texts = [$('vaT1').value.trim(), $('vaT2').value.trim(), $('vaT3').value.trim()].filter(x => x);
     start('/video', { prompt: p, scenes: +$('vaScenes').value, voice: $('vaVoice').value, texts: texts }, '⏳ Agent scenes bana raha hai…');
   });
+})();
+
+/* ---------- TUTOR-BRAIN (server /brain/ask — NEXUS guide mode) ---------- */
+(function () {
+  const B = 'https://nexus-agent-ycck.onrender.com';
+  const $ = function (id) { return document.getElementById(id); };
+  const out = $('tutOut'); if (!out) return;
+  let last = '';
+  function say() {
+    if (!last || !('speechSynthesis' in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(String(last).slice(0, 600));
+      const vs = speechSynthesis.getVoices() || [];
+      const fem = /veena|lekha|heera|kalpana|samantha|karen|serena|moira|tessa|zira|neerja|swara|aria|libby/i;
+      const v = vs.find(function (x) { return fem.test(x.name); }) || vs.find(function (x) { return /hi[-_]IN/i.test(x.lang); });
+      if (v) u.voice = v;
+      u.lang = 'hi-IN'; u.rate = 1.0; u.pitch = 1.05;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  async function go() {
+    const q = ($('tutQ').value || '').trim();
+    if (!q) { if (typeof toast === 'function') toast('SAWAAL LIKHO PEHLE'); return; }
+    out.textContent = '🧠 NEXUS soch raha hai…';
+    try {
+      const r = await fetch(B + '/brain/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q.slice(0, 300) }) });
+      const d = await r.json();
+      last = (d && d.answer) ? d.answer : ('⚠️ ' + ((d && d.detail) || 'jawab nahi mila'));
+    } catch (e) { last = '⚠️ server se connection nahi — ' + e.message; }
+    out.textContent = last;
+    say();
+  }
+  $('tutAsk').addEventListener('click', go);
+  $('tutSay').addEventListener('click', say);
+  $('tutQ').addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
 })();
 </script>
 </body>
