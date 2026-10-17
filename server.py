@@ -940,6 +940,19 @@ async def xray_build_view(xid: str):
 TB_PAIRS = [('BTCUSDT', 'BTC'), ('ETHUSDT', 'ETH'), ('SOLUSDT', 'SOL'), ('DOGEUSDT', 'DOGE'), ('ADAUSDT', 'ADA'), ('XRPUSDT', 'XRP')]
 TB_STYLES = ['trend', 'momentum', 'meanrev']
 TB = {'bots': {}, 'journal': [], 'lessons': [], 'last_scan': 0}
+SIG_LOG = []
+try:
+    _sigp = MEDIA_DIR / 'tradesignals.json'
+    if _sigp.exists():
+        SIG_LOG = _j.loads(_sigp.read_text())[:30]
+except Exception:
+    SIG_LOG = []
+
+def _sig_save():
+    try:
+        (MEDIA_DIR / 'tradesignals.json').write_text(_j.dumps(SIG_LOG[-30:]))
+    except Exception:
+        pass
 for _i, (_sym, _nm) in enumerate(TB_PAIRS):
     TB['bots'][_sym] = {'name': 'Bot-' + _nm, 'style': TB_STYLES[_i % 3], 'pos': None, 'wins': 0, 'losses': 0, 'pnl': 0.0}
 
@@ -1051,12 +1064,36 @@ async def trade_brain():
             sig = _tb_signal(sym, rows)
             bot = _tb_manage(sym, sig)
             out['pairs'][nm] = sig
+            if sig.get('signal') in ('LONG', 'SHORT') and TB.setdefault('last_sig', {}).get(sym) != sig['signal']:
+                TB['last_sig'][sym] = sig['signal']
+                SIG_LOG.append({'t': int(time.time()), 'sym': sym, 'nm': nm, 'signal': sig['signal'],
+                                'px': sig['px'], 'sl': sig['sl'], 'tp': sig['tp'], 'rsi': sig['rsi'], 'score': sig['score']})
+                del SIG_LOG[:-30]
+                _sig_save()
+            elif sig.get('signal') == 'WAIT':
+                TB.setdefault('last_sig', {}).pop(sym, None)
             out['bots'][sym] = {'name': bot['name'], 'style': bot['style'], 'wins': bot['wins'], 'losses': bot['losses'],
                                 'pnl': bot['pnl'], 'pos': bot['pos']}
         except Exception as e:
             out['pairs'][nm] = {'error': str(e)[:100]}
     TB['last_scan'] = int(time.time())
     return out
+
+@app.get('/signals')
+async def signals():
+    return {'ok': True, 'count': len(SIG_LOG), 'signals': list(reversed(SIG_LOG[-30:]))}
+
+@app.on_event('startup')
+async def _sig_autoloop():
+    async def _loop():
+        await asyncio.sleep(25)
+        while True:
+            try:
+                await trade_brain()
+            except Exception:
+                pass
+            await asyncio.sleep(300)
+    asyncio.create_task(_loop())
 
 @app.post('/trade/brain/learn')
 async def trade_brain_learn():
