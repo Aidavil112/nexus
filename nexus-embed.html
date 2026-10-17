@@ -1,0 +1,47 @@
+<div id="nx-emb" style="font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:#070d1f;color:#e8f0ff;border-radius:16px;padding:16px;max-width:420px;margin:0 auto;text-align:center">
+  <div style="font-size:17px;font-weight:800;letter-spacing:3px;color:#ffd94d">NEXUS</div>
+  <div style="font-size:10px;color:#9fb8e8;margin:3px 0 12px">bolke pucho — Hindi/English</div>
+  <button id="nx-mic" style="width:74px;height:74px;border-radius:50%;border:2px solid #2a3c68;background:radial-gradient(circle at 35% 30%,#16233f,#0b1428);font-size:30px;cursor:pointer">🎤</button>
+  <div id="nx-st" style="margin:10px 0;font-size:12px;color:#ffd94d;min-height:16px">TAP KARO AUR BOLO</div>
+  <div id="nx-log" style="display:flex;flex-direction:column;gap:8px;text-align:left"></div>
+</div>
+<script>
+(function () {
+  var BASE = 'https://nexus-agent-ycck.onrender.com';
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var mic = document.getElementById('nx-mic'), st = document.getElementById('nx-st'), log = document.getElementById('nx-log');
+  var busy = false, spoke = false;
+  var FEM = /lekha|kajal|swara|nisha|veena|heera|kalpana|neerja|samantha|karen|serena|moira|tessa|aria|libby/i;
+  function add(c, t) { var d = document.createElement('div'); d.style.cssText = 'padding:8px 11px;border-radius:11px;font-size:13px;line-height:1.4;max-width:88%;white-space:pre-wrap;' + (c ? 'align-self:flex-end;background:#14224a;border:1px solid #2a3c68' : 'align-self:flex-start;background:#0d1f16;border:1px solid #1d4a35;color:#d9ffe9'); d.textContent = t; log.appendChild(d); }
+  function speak(t) {
+    try {
+      var u = new SpeechSynthesisUtterance(String(t).replace(/[*_`#]/g, ' ').slice(0, 450));
+      var vs = speechSynthesis.getVoices() || [];
+      var v = vs.find(function (x) { return /hi/i.test(x.lang || '') && FEM.test(x.name); }) || vs.find(function (x) { return /hi[-_]/i.test(x.lang || ''); }) || vs.find(function (x) { return FEM.test(x.name); });
+      if (v) u.voice = v;
+      u.lang = v ? v.lang : 'hi-IN'; u.rate = 0.95;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function ask(q) {
+    busy = true; add(1, q); st.textContent = '\u{1F9E0} NEXUS soch raha hai…';
+    fetch(BASE + '/brain/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: String(q).slice(0, 280) }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var a = d.answer || 'Server jag raha hai — 1 min me phir pucho.';
+        add(0, a); speak(a); st.textContent = 'TAP KARO AUR BOLO'; busy = false;
+      })
+      .catch(function () { add(0, 'Connection nahi — 1 min me phir try karo.'); st.textContent = 'TAP KARO AUR BOLO'; busy = false; });
+  }
+  mic.addEventListener('click', function () {
+    if (busy || !SR) { if (!SR) st.textContent = 'Ye browser sun nahi sakta — Safari/Chrome me kholo'; return; }
+    var rec = new SR(); rec.lang = 'hi-IN'; rec.interimResults = false;
+    if (!spoke) { speak('नमस्ते, मैं नेक्सस हूँ। बताइए?'); spoke = true; }
+    rec.onstart = function () { mic.style.borderColor = '#ff5a5a'; st.textContent = '\u{1F534} BOLO…'; };
+    rec.onerror = function () { mic.style.borderColor = '#2a3c68'; st.textContent = 'phir se \u{1F3A4} dabao'; };
+    rec.onend = function () { mic.style.borderColor = '#2a3c68'; if (st.textContent.indexOf('BOLO') >= 0) st.textContent = 'TAP KARO AUR BOLO'; };
+    rec.onresult = function (e) { var t = (e.results[0][0].transcript || '').trim(); if (t) ask(t); };
+    try { rec.start(); } catch (e) {}
+  });
+})();
+</script>
