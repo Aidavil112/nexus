@@ -319,7 +319,7 @@
 <body>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">NEXUS Command Deck — free personal AI assistant dashboard with 21 agents and paper trading</h1>
 <nav id="topbar">
-  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v2.8</span>
+  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v2.9</span>
   <button class="tb on" data-v="home">🏠 HOME</button>
   <button class="tb" data-v="trade">📈 TRADE</button>
   <button class="tb" data-v="gmail">📬 GMAIL</button>
@@ -338,6 +338,11 @@
         <button class="btn" id="tbLearn">🧠 SEEKHO</button>
       </div>
       <div id="tbOut" class="hint" style="white-space:pre-wrap;max-height:300px;overflow:auto">⚡ SCAN dabao — live EMA/RSI/ATR signals + bots ke paper-trades + P/L!</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 2px 4px">
+          <span style="font-size:10px;letter-spacing:2px;color:#ffd94d">📡 AUTO-SIGNALS</span>
+          <span style="font-size:9px;color:#7a8db8">har 5-min auto-scan · naya signal = NEXUS bolega</span>
+        </div>
+        <div id="sigFeed" class="hint" style="white-space:pre-wrap;max-height:170px;overflow:auto">📡 auto-scan shuru ho raha…</div>
   <div class="pcard"><h3>REAL CHART (TradingView)</h3>
     <div class="prow2" style="margin-bottom:8px"><select class="psel" id="tvSym">
       <option value="NSE:RELIANCE">RELIANCE (NSE)</option><option value="NSE:TCS">TCS (NSE)</option>
@@ -3044,7 +3049,36 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
       out.textContent = (d.lessons && d.lessons.length) ? ('🎓 SEEKH (agla scan in rules se):\n\n' + d.lessons[d.lessons.length - 1].rules) : (d.note || 'abhi kuch seekhne ko nahi');
     } catch (e) { out.textContent = '⚠️ ' + e.message; }
   });
-})();
-</script>
+  /* 📡 AUTO-SIGNALS: /signals poll 60s — naya signal = toast + NEXUS voice */
+  const feed = $('sigFeed');
+  let seenT = 0;
+  try { seenT = +(localStorage.getItem('nexus_sigseen') || 0); } catch (err) {}
+  function tAgo(t) { const m = Math.max(1, Math.round((Date.now() / 1000 - t) / 60)); return m < 60 ? m + 'm pehle' : Math.round(m / 60) + 'h pehle'; }
+  async function sigPoll(first) {
+    if (!feed) return;
+    try {
+      const r = await fetch(B + '/signals');
+      const d = await r.json();
+      if (!d.ok) throw new Error('fail');
+      const L = d.signals || [];
+      feed.textContent = L.length ? L.slice(0, 7).map(function (s) {
+        return (s.signal === 'LONG' ? '🟢 LONG  ' : '🔴 SHORT ') + s.nm + ' @ ' + s.px + ' | SL ' + s.sl + ' TP ' + s.tp + ' · ' + tAgo(s.t);
+      }).join('\n') : '📡 auto-scan chal raha hai — pehla signal yahan dikhega (har 5-min)';
+      if (L.length && L[0].t > seenT) {
+        const fresh = !first && (Date.now() / 1000 - L[0].t) < 600;
+        seenT = L[0].t;
+        try { localStorage.setItem('nexus_sigseen', String(seenT)); } catch (err) {}
+        if (fresh) {
+          const s = L[0];
+          toast('📡 NAYA SIGNAL: ' + s.nm + ' ' + s.signal + ' @ ' + s.px);
+          log('📡 signal: ' + s.nm + ' ' + s.signal + ' @ ' + s.px);
+          if (typeof Voice !== 'undefined' && Voice.speakOn) Voice.speak('Naya signal Sir — ' + s.nm + ' ' + (s.signal === 'LONG' ? 'long' : 'short') + ', price ' + s.px);
+        }
+      }
+    } catch (err) { if (first) feed.textContent = '📡 signal-server se jud raha… (60s me phir koshish)'; }
+  }
+  sigPoll(true);
+  setInterval(sigPoll, 60000);
+})();</script>
 </body>
 </html>
