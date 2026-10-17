@@ -3,84 +3,152 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>NEXUS LITE — Bolke Baat</title>
+<title>NEXUS LITE — Full Voice</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { min-height: 100vh; background: #070d1f; color: #e8f0ff; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
-         display: flex; flex-direction: column; align-items: center; padding: 34px 18px 40px; }
-  .brand { font-size: 30px; font-weight: 800; letter-spacing: 6px; color: #ffd94d; text-shadow: 0 0 18px rgba(255,217,77,.35); }
-  .sub { font-size: 12px; color: #9fb8e8; margin: 6px 0 26px; letter-spacing: 1px; }
-  #mic { width: 148px; height: 148px; border-radius: 50%; border: 3px solid #2a3c68; background: radial-gradient(circle at 35% 30%, #16233f, #0b1428);
-         font-size: 56px; cursor: pointer; transition: all .25s; box-shadow: 0 0 30px rgba(30,60,120,.35); }
+         display: flex; flex-direction: column; align-items: center; padding: 30px 16px 44px; }
+  .brand { font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #ffd94d; text-shadow: 0 0 18px rgba(255,217,77,.35); }
+  .sub { font-size: 11px; color: #9fb8e8; margin: 5px 0 20px; letter-spacing: 1px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
+  .b { background: #101c38; color: #dbe6ff; border: 1px solid #2a3c68; border-radius: 10px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+  .b.on { background: #233a14; border-color: #4d7a2a; color: #d9ffcf; }
+  #mic { width: 140px; height: 140px; border-radius: 50%; border: 3px solid #2a3c68; background: radial-gradient(circle at 35% 30%, #16233f, #0b1428);
+         font-size: 52px; cursor: pointer; transition: all .25s; }
   #mic.on { border-color: #ff5a5a; box-shadow: 0 0 44px rgba(255,90,90,.5); animation: pulse 1.2s infinite; }
   @keyframes pulse { 50% { box-shadow: 0 0 60px rgba(255,90,90,.75); } }
-  #stat { margin: 18px 0 8px; font-size: 13px; color: #ffd94d; letter-spacing: 2px; min-height: 18px; }
-  .hint { font-size: 11px; color: #7a8db8; margin-bottom: 20px; text-align: center; }
+  #stat { margin: 16px 0 6px; font-size: 13px; color: #ffd94d; letter-spacing: 1.5px; min-height: 18px; text-align: center; }
+  .hint { font-size: 11px; color: #7a8db8; margin-bottom: 18px; text-align: center; }
   #log { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 10px; }
   .bub { padding: 11px 14px; border-radius: 14px; font-size: 14px; line-height: 1.45; max-width: 88%; white-space: pre-wrap; }
   .you { align-self: flex-end; background: #14224a; border: 1px solid #2a3c68; }
   .nx  { align-self: flex-start; background: #0d1f16; border: 1px solid #1d4a35; color: #d9ffe9; }
-  .foot { margin-top: 26px; font-size: 10px; color: #55688f; text-align: center; }
+  .sig { align-self: center; background: #241a05; border: 1px solid #7a5c12; color: #ffe9a8; font-size: 12.5px; }
+  .foot { margin-top: 24px; font-size: 10px; color: #55688f; text-align: center; }
 </style>
 </head>
 <body>
   <div class="brand">N E X U S</div>
-  <div class="sub">LITE · bolke baat karo · Hindi/English</div>
-  <button id="mic" title="dabao aur bolo">🎤</button>
-  <div id="stat">TAP KARO AUR BOLO</div>
-  <div class="hint">pehli baar mic-permission maangega — Allow karna</div>
+  <div class="sub">LITE · full voice · bolke baat (Hindi/English)</div>
+  <div class="row">
+    <button class="b" id="bLang">हिं</button>
+    <button class="b" id="bJ">🤖 NEXUS MODE</button>
+    <button class="b on" id="bMute">🔊</button>
+  </div>
+  <button id="mic" title="LIVE ON/OFF">🎤</button>
+  <div id="stat">🎤 dabao — LIVE baat shuru</div>
+  <div class="hint">"NEXUS!" bolo → जी सर? · pehli baar 50s lag sakta hai (free server)</div>
   <div id="log"></div>
-  <div class="foot">NEXUS-LITE · aidavil112.github.io/nexus · full version: <b>/nexus</b></div>
+  <div class="foot">NEXUS-LITE v2 · aidavil112.github.io/nexus/lite · full: <b>/nexus</b></div>
 <script>
   const BASE = 'https://nexus-agent-ycck.onrender.com';
-  const mic = document.getElementById('mic'), stat = document.getElementById('stat'), log = document.getElementById('log');
-  let rec = null, busy = false, spoke = false;
-
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const $ = id => document.getElementById(id);
+  const mic = $('mic'), stat = $('stat'), log = $('log');
+  let rec = null, live = false, hold = false, jMode = false, mute = false, lang = 'hi-IN';
+  let fails = 0, lastRestart = 0, restUntil = 0, greeted = false, busy = false, jWindow = 0;
+  try { jMode = localStorage.getItem('nl_j') === '1'; lang = localStorage.getItem('nl_lang') || 'hi-IN'; mute = localStorage.getItem('nl_mute') === '1'; } catch (e) {}
+  const WAKE = /nexus|jarvis|नेक्सस|जार्विस|जर्विस|निकस/i;
   const FEM = /lekha|kajal|swara|nisha|veena|heera|kalpana|neerja|samantha|karen|serena|moira|tessa|aria|libby/i;
-  function speak(t) {
-    if (!('speechSynthesis' in window)) return;
-    try {
-      const u = new SpeechSynthesisUtterance(String(t).replace(/[*_`#]/g, ' ').slice(0, 500));
-      const vs = speechSynthesis.getVoices() || [];
-      const v = vs.find(x => /hi/i.test(x.lang || '') && FEM.test(x.name)) || vs.find(x => /hi[-_]IN/i.test(x.lang || '')) || vs.find(x => FEM.test(x.name));
-      if (v) u.voice = v;
-      u.lang = v ? v.lang : 'hi-IN'; u.rate = 0.95; u.pitch = 1.0;
-      speechSynthesis.cancel(); speechSynthesis.speak(u);
-    } catch (e) {}
-  }
+
   function add(cls, txt) { const d = document.createElement('div'); d.className = 'bub ' + cls; d.textContent = txt; log.appendChild(d); window.scrollTo(0, document.body.scrollHeight); }
+  function save() { try { localStorage.setItem('nl_j', jMode ? '1' : '0'); localStorage.setItem('nl_lang', lang); localStorage.setItem('nl_mute', mute ? '1' : '0'); } catch (e) {} }
+
+  function speak(t, after) {
+    if (mute || !('speechSynthesis' in window)) { if (live && !hold) setTimeout(startRec, 300); return; }
+    try {
+      const u = new SpeechSynthesisUtterance(String(t).replace(/[*_`#]/g, ' ').slice(0, 480));
+      const vs = speechSynthesis.getVoices() || [];
+      const L = /^hi/.test(lang) ? 'hi' : 'en';
+      const v = vs.find(x => (L === 'hi' ? /hi/i.test(x.lang || '') : /^en/i.test(x.lang || '')) && FEM.test(x.name))
+             || vs.find(x => (L === 'hi' ? /hi[-_]/i.test(x.lang || '') : /^en/i.test(x.lang || '')))
+             || vs.find(x => FEM.test(x.name));
+      if (v) u.voice = v;
+      u.lang = v ? v.lang : lang; u.rate = 0.95; u.pitch = 1.0;
+      u.onstart = () => { hold = true; stopRec(); };
+      u.onend = u.onerror = () => { hold = false; if (live) setTimeout(startRec, 450); if (after) after(); };
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) { hold = false; if (live) setTimeout(startRec, 450); }
+  }
+  function stopRec() { if (rec) { try { rec.stop(); } catch (e) {} } }
 
   async function ask(q) {
-    busy = true; stat.textContent = '🧠 NEXUS soch raha hai…';
-    add('you', q);
+    busy = true; add('you', q); stat.textContent = '🧠 NEXUS soch raha hai…';
     try {
       const r = await fetch(BASE + '/brain/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q.slice(0, 300) }) });
       const d = await r.json();
-      if (!d.answer) throw new Error(d.detail || 'jawab nahi mila');
-      add('nx', d.answer);
-      speak(d.answer);
+      if (!d.answer) throw new Error('no-answer');
+      add('nx', d.answer); speak(d.answer);
     } catch (e) {
-      const m = 'Server jag raha hai (free-tier, 50s lagte hain) — 1 min me phir tap karo, Sir.';
+      const m = 'Server jag raha hai Sir — 1 min me phir boliye.';
       add('nx', m); speak(m);
     }
     busy = false;
   }
 
+  function startRec() {
+    if (!SR || !live || hold || busy) return;
+    rec = new SR(); rec.lang = lang; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.onresult = e => {
+      const t = (e.results[0][0].transcript || '').trim(); if (!t) return;
+      if (live && jMode) {
+        if (!WAKE.test(t)) {
+          if (Date.now() > jWindow) { stat.textContent = '🤖 "NEXUS" bolo pehle…'; return; }
+          jWindow = Date.now() + 45000;
+        } else {
+          const cmd = t.replace(WAKE, '').replace(/^[\s,.!?-]+/, '');
+          jWindow = Date.now() + 45000;
+          if (!cmd) { speak('जी सर?'); stat.textContent = '🤖 जी सर? — aage boliye (45s)'; return; }
+          ask(cmd); return;
+        }
+      }
+      ask(t);
+    };
+    rec.onerror = ev => {
+      if (ev.error === 'not-allowed') { stat.textContent = 'MIC PERMISSION chahiye (Settings→Safari→Mic)'; live = false; mic.classList.remove('on'); }
+    };
+    rec.onend = () => {
+      if (hold) return;
+      if (live) {
+        const now = Date.now();
+        fails = (now - lastRestart < 4000) ? fails + 1 : 0; lastRestart = now;
+        if (fails > 6) { fails = 0; restUntil = now + 25000; stat.textContent = '😴 25s rest — phir khud wapas'; setTimeout(startRec, 25000); return; }
+        setTimeout(startRec, 350);
+      }
+    };
+    try { rec.start(); if (stat.textContent.indexOf('BOLO') < 0 && stat.textContent.indexOf('सर?') < 0) stat.textContent = '🔴 LIVE — BOLO… ("NEXUS" + sawal)'; } catch (e) {}
+  }
+
   mic.addEventListener('click', () => {
-    if (busy) return;
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      stat.textContent = 'Ye browser sun nahi sakta — Safari/Chrome use karo'; return;
-    }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    try { if (rec) { try { rec.stop(); } catch (e) {} } } catch (e) {}
-    rec = new SR(); rec.lang = 'hi-IN'; rec.interimResults = false; rec.maxAlternatives = 1;
-    if (!spoke) { speak('नमस्ते, मैं NEXUS हूँ। बताइए?'); spoke = true; }
-    rec.onstart = () => { mic.classList.add('on'); stat.textContent = '🔴 SUN RAHA HUN — BOLO…'; };
-    rec.onerror = ev => { mic.classList.remove('on'); stat.textContent = ev.error === 'not-allowed' ? 'MIC PERMISSION chahiye (Allow karo)' : 'phir se 🎤 dabao'; };
-    rec.onend = () => { mic.classList.remove('on'); if (stat.textContent.indexOf('BOLO') >= 0) stat.textContent = 'TAP KARO AUR BOLO'; };
-    rec.onresult = e => { const t = e.results[0][0].transcript.trim(); if (t) ask(t); };
-    try { rec.start(); } catch (e) { stat.textContent = 'phir se 🎤 dabao'; }
+    if (!SR) { stat.textContent = 'Ye browser sun nahi sakta — Safari/Chrome'; return; }
+    if (live) { live = false; mic.classList.remove('on'); stopRec(); stat.textContent = 'LIVE band — phir 🎤 dabao'; return; }
+    live = true; mic.classList.add('on'); fails = 0;
+    if (!greeted) { greeted = true; speak('नमस्ते, मैं नेक्सस हूँ। बताइए?'); } else startRec();
+    setTimeout(() => { if (live && !hold && !busy) startRec(); }, 1200);
   });
+
+  $('bLang').textContent = lang === 'hi-IN' ? 'हिं' : 'EN';
+  $('bJ').classList.toggle('on', jMode);
+  $('bMute').textContent = mute ? '🔇' : '🔊';
+  $('bMute').classList.toggle('on', false);
+  $('bLang').addEventListener('click', () => { lang = lang === 'hi-IN' ? 'en-IN' : 'hi-IN'; $('bLang').textContent = lang === 'hi-IN' ? 'हिं' : 'EN'; save(); stat.textContent = lang === 'hi-IN' ? 'अब हिंदी सुनूंगा' : 'Now listening English'; });
+  $('bJ').addEventListener('click', () => { jMode = !jMode; $('bJ').classList.toggle('on', jMode); save(); stat.textContent = jMode ? '🤖 NEXUS MODE — "NEXUS" bolo' : 'Sab sunta hai (wake off)'; });
+  $('bMute').addEventListener('click', () => { mute = !mute; $('bMute').textContent = mute ? '🔇' : '🔊'; save(); if (mute) { try { speechSynthesis.cancel(); } catch (e) {} } });
+
+  /* signal-announce (jaise full-agent me) */
+  let seenT = 0;
+  try { seenT = +(localStorage.getItem('nl_sig') || 0); } catch (e) {}
+  setInterval(async () => {
+    try {
+      const r = await fetch(BASE + '/signals'); const d = await r.json();
+      const L = d.signals || [];
+      if (L.length && L[0].t > seenT) {
+        const fresh = (Date.now() / 1000 - L[0].t) < 600;
+        seenT = L[0].t; try { localStorage.setItem('nl_sig', String(seenT)); } catch (e) {}
+        if (fresh) { const s = L[0]; add('sig', '📡 SIGNAL: ' + s.nm + ' ' + s.signal + ' @ ' + s.px); speak('नया सिग्नल — ' + s.nm + ' ' + (s.signal === 'LONG' ? 'लॉन्ग' : 'शॉर्ट')); }
+      }
+    } catch (e) {}
+  }, 60000);
 </script>
 </body>
 </html>
