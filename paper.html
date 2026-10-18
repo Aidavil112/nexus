@@ -150,6 +150,7 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <button id="genBtn" type="button" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🙋‍♀ Lekha</button>
         <div class="flex items-center gap-1.5 text-xs">
           <label for="strategySelect" class="text-slate-400 text-[11px]">Strategy:</label>
           <select id="strategySelect" class="bg-slate-950 border border-slate-700 text-[11px] text-white rounded-lg px-2 py-1 font-semibold">
@@ -218,9 +219,20 @@
     function formatINR(v) { return '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function formatUSD(v) { return '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function showToast(msg, type) { const t = document.getElementById('statusToast'); t.textContent = msg; t.className = 'rounded-xl px-3.5 py-2.5 text-xs font-semibold border transition-all ' + (type === 'error' ? 'bg-rose-500/15 border-rose-500/40 text-rose-300' : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'); }
+    let voiceGen = 'F';
     function speakBorgMessage(text) {
       if (!state.isVoiceOn || !('speechSynthesis' in window)) return;
-      try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'hi-IN'; u.rate = 0.95; window.speechSynthesis.speak(u); } catch(e) {}
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        const vs = speechSynthesis.getVoices() || [];
+        let v = null;
+        if (voiceGen === 'M') v = vs.find(x => /rishi|hemant|madhur/i.test(x.name || '') && /hi/i.test(x.lang || '')) || vs.find(x => /rishi|hemant|madhur|male/i.test(x.name || ''));
+        else v = vs.find(x => /lekha|kajal|swara|nisha/i.test(x.name || '') && /hi/i.test(x.lang || '')) || vs.find(x => /hi[-_]/i.test(x.lang || ''));
+        if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'hi-IN';
+        u.rate = 0.95; u.pitch = 1.02;
+        window.speechSynthesis.speak(u);
+      } catch(e) {}
     }
     function initSpeechEngine() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -354,6 +366,8 @@
       document.getElementById('toggleAutoBotBtn').onclick = () => { state.isAutoPilot = !state.isAutoPilot; document.getElementById('toggleAutoBotBtn').textContent = state.isAutoPilot ? '🤖 Auto-Pilot: ON' : '🤖 Auto-Pilot: OFF'; };
       document.getElementById('toggleVoiceBtn').onclick = () => { state.isVoiceOn = !state.isVoiceOn; document.getElementById('toggleVoiceBtn').textContent = state.isVoiceOn ? '🔊 Voice: ON' : '🔇 Voice: OFF'; if (!state.isVoiceOn) { try { speechSynthesis.cancel(); } catch(e) {} } };
       document.getElementById('toggleFeedBtn').onclick = () => { state.isFeedRunning = !state.isFeedRunning; document.getElementById('toggleFeedBtn').textContent = state.isFeedRunning ? '● Live Feed: ON' : '○ Live Feed: OFF'; if (state.isFeedRunning) { feedInterval = setInterval(tick, 2500); } else { clearInterval(feedInterval); } };
+      const gb = document.getElementById('genBtn');
+      gb.onclick = () => { voiceGen = (voiceGen === 'F') ? 'M' : 'F'; gb.textContent = voiceGen === 'F' ? '🙋‍♀ Lekha' : '🙋‍♂ Rishi'; speakBorgMessage(voiceGen === 'F' ? 'Main Lekha bol rahi hoon Bibek.' : 'Main Rishi bol raha hoon Bibek.'); };
     };
   </script>
 </body>
