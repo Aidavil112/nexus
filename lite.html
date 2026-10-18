@@ -34,6 +34,7 @@
     <button class="b" id="bLang">हिं</button>
     <button class="b" id="bJ">🤖 NEXUS MODE</button>
     <button class="b" id="bEcho">🦜 ECHO</button>
+    <button class="b" id="bGen">🙋‍♀</button>
     <button class="b on" id="bMute">🔊</button>
   </div>
   <button id="mic" title="LIVE ON/OFF">🎤</button>
@@ -55,15 +56,16 @@
   function add(cls, txt) { const d = document.createElement('div'); d.className = 'bub ' + cls; d.textContent = txt; log.appendChild(d); window.scrollTo(0, document.body.scrollHeight); }
   function save() { try { localStorage.setItem('nl_j', jMode ? '1' : '0'); localStorage.setItem('nl_lang', lang); localStorage.setItem('nl_mute', mute ? '1' : '0'); } catch (e) {} }
 
+  let vGen = 'F';
   function speak(t, after) {
     if (mute || !('speechSynthesis' in window)) { if (live && !hold) setTimeout(startRec, 300); return; }
     try {
       const u = new SpeechSynthesisUtterance(String(t).replace(/[*_`#]/g, ' ').slice(0, 480));
       const vs = speechSynthesis.getVoices() || [];
       const L = /^hi/.test(lang) ? 'hi' : 'en';
-      const v = vs.find(x => (L === 'hi' ? /hi/i.test(x.lang || '') : /^en/i.test(x.lang || '')) && FEM.test(x.name))
-             || vs.find(x => (L === 'hi' ? /hi[-_]/i.test(x.lang || '') : /^en/i.test(x.lang || '')))
-             || vs.find(x => FEM.test(x.name));
+      let v = null;
+      if (vGen === 'M') v = vs.find(x => /rishi|hemant|madhur/i.test(x.name || '') && /hi/i.test(x.lang || '')) || vs.find(x => /rishi|hemant|madhur|male/i.test(x.name || ''));
+      else v = vs.find(x => (L === 'hi' ? /hi/i.test(x.lang || '') : /^en/i.test(x.lang || '')) && FEM.test(x.name)) || vs.find(x => (L === 'hi' ? /hi[-_]/i.test(x.lang || '') : /^en/i.test(x.lang || ''))) || vs.find(x => FEM.test(x.name));
       if (v) u.voice = v;
       u.lang = v ? v.lang : lang; u.rate = 0.95; u.pitch = 1.0;
       u.onstart = () => { hold = true; stopRec(); };
@@ -136,6 +138,7 @@
   $('bLang').addEventListener('click', () => { lang = lang === 'hi-IN' ? 'en-IN' : 'hi-IN'; $('bLang').textContent = lang === 'hi-IN' ? 'हिं' : 'EN'; save(); stat.textContent = lang === 'hi-IN' ? 'अब हिंदी सुनूंगा' : 'Now listening English'; });
   $('bJ').addEventListener('click', () => { jMode = !jMode; $('bJ').classList.toggle('on', jMode); save(); stat.textContent = jMode ? '🤖 NEXUS MODE — "NEXUS" bolo' : 'Sab sunta hai (wake off)'; });
   $('bEcho').addEventListener('click', () => { echo = !echo; $('bEcho').classList.toggle('on', echo); stat.textContent = echo ? '🦜 ECHO ON — bolo, wahi wapas sunaunga' : '🧠 wapas NEXUS-brain'; });
+  $('bGen').addEventListener('click', () => { vGen = (vGen === 'F') ? 'M' : 'F'; $('bGen').textContent = vGen === 'F' ? '🙋‍♀' : '🙋‍♂'; speak(vGen === 'F' ? 'Main Lekha bol rahi hoon.' : 'Main Rishi bol raha hoon.'); });
   $('bMute').addEventListener('click', () => { mute = !mute; $('bMute').textContent = mute ? '🔇' : '🔊'; save(); if (mute) { try { speechSynthesis.cancel(); } catch (e) {} } });
 
   /* signal-announce (jaise full-agent me) */
