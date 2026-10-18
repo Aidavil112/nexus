@@ -211,7 +211,7 @@
     KEYS.forEach(k => { const a = marketCatalog[k]; a.price = +(a.usdPrice * USD_TO_INR).toFixed(2); a.history = [a.usdPrice]; });
     let state = { cash: initialCapital, activeSymbol: 'BTC', isFeedRunning: true, isAutoPilot: true, isVoiceOn: true,
       strategy: 'HYBRID', tickCount: 1, autoTradeCount: 0,
-      lastSpeechText: 'Namaste Bibek! Main NEXUS paper-bot hoon. ₹50,000 ke nakli paise se practice karte hain!',
+      lastSpeechText: 'Namaste Malik! Main NEXUS paper-bot hoon. ₹50,000 ke nakli paise se practice karte hain!',
       trades: [] };
     try { const sv = JSON.parse(localStorage.getItem('nexus_paper') || 'null'); if (sv && typeof sv.cash === 'number') { state = Object.assign(state, sv); KEYS.forEach(k => { if (!marketCatalog[k].history || !marketCatalog[k].history.length) marketCatalog[k].history = [marketCatalog[k].usdPrice]; if (sv.h && sv.h[k]) { marketCatalog[k].positions = sv.h[k].p; marketCatalog[k].avgCost = sv.h[k].c; } }); } } catch(e) {}
     function saveState() { try { const h = {}; KEYS.forEach(k => h[k] = { p: marketCatalog[k].positions, c: marketCatalog[k].avgCost }); localStorage.setItem('nexus_paper', JSON.stringify({ cash: state.cash, autoTradeCount: state.autoTradeCount, trades: state.trades.slice(0, 30), h })); } catch(e) {} }
@@ -248,7 +248,7 @@
       if (t.includes('btc')) reply = 'Bitcoin abhi ' + formatUSD(marketCatalog.BTC.usdPrice) + ' (' + formatINR(marketCatalog.BTC.price) + ') par hai.';
       else if (t.includes('eth')) reply = 'Ethereum abhi ' + formatUSD(marketCatalog.ETH.usdPrice) + ' par hai.';
       else if (t.includes('sol')) reply = 'Solana ' + formatUSD(marketCatalog.SOL.usdPrice) + ' par hai.';
-      else if (t.includes('buy') || t.includes('kharid') || t.includes('खरीद')) { executeBuy(); reply = 'Paper-buy execute kar diya Bibek!'; }
+      else if (t.includes('buy') || t.includes('kharid') || t.includes('खरीद')) { executeBuy(); reply = 'Paper-buy execute kar diya Malik!'; }
       else if (t.includes('sell') || t.includes('bech') || t.includes('बेच')) { executeSell(); reply = 'Paper-sell kar diya!'; }
       document.getElementById('borgSpeechText').textContent = '"' + reply + '"';
       speakBorgMessage(reply);
@@ -289,7 +289,7 @@
           const qty = a.positions, amt = +(qty * a.price).toFixed(2);
           a.positions = 0; a.avgCost = 0; state.cash += amt; state.autoTradeCount++;
           recordTrade('AUTO-SELL', sym, qty, a.price, amt, 'Target Hit (+1.0%)');
-          showToast(sym + ' paper-profit book!', 'success'); speakBorgMessage(sym + ' mein profit book ho gaya Bibek.'); saveState(); return;
+          showToast(sym + ' paper-profit book!', 'success'); speakBorgMessage(sym + ' mein profit book ho gaya Malik.'); saveState(); return;
         }
       }
       for (const sym of KEYS) {
@@ -360,14 +360,14 @@
       document.getElementById('orderQtyInput').oninput = renderUI;
       document.getElementById('resetBtn').onclick = () => { if (!confirm('Paper-wallet reset (₹50,000 fresh)?')) return; localStorage.removeItem('nexus_paper'); location.reload(); };
       document.getElementById('symbolSelect').onchange = (e) => { state.activeSymbol = e.target.value; document.getElementById('activeAnalysisSymbol').textContent = e.target.value; renderUI(); };
-      document.getElementById('askBorgNowBtn').onclick = () => { const a = marketCatalog[state.activeSymbol]; speakBorgMessage(a.signal === 'STRONG BUY' ? state.activeSymbol + ' buy-zone mein hai Bibek, RSI ' + a.rsi : state.activeSymbol + ' par abhi ' + a.signal + ', RSI ' + a.rsi); };
+      document.getElementById('askBorgNowBtn').onclick = () => { const a = marketCatalog[state.activeSymbol]; speakBorgMessage(a.signal === 'STRONG BUY' ? state.activeSymbol + ' buy-zone mein hai Malik, RSI ' + a.rsi : state.activeSymbol + ' par abhi ' + a.signal + ', RSI ' + a.rsi); };
       document.getElementById('micBtn').onclick = () => { if (recognition) recognition.start(); };
       document.getElementById('nexusVoiceOrb').onclick = () => { if (recognition) recognition.start(); };
       document.getElementById('toggleAutoBotBtn').onclick = () => { state.isAutoPilot = !state.isAutoPilot; document.getElementById('toggleAutoBotBtn').textContent = state.isAutoPilot ? '🤖 Auto-Pilot: ON' : '🤖 Auto-Pilot: OFF'; };
       document.getElementById('toggleVoiceBtn').onclick = () => { state.isVoiceOn = !state.isVoiceOn; document.getElementById('toggleVoiceBtn').textContent = state.isVoiceOn ? '🔊 Voice: ON' : '🔇 Voice: OFF'; if (!state.isVoiceOn) { try { speechSynthesis.cancel(); } catch(e) {} } };
       document.getElementById('toggleFeedBtn').onclick = () => { state.isFeedRunning = !state.isFeedRunning; document.getElementById('toggleFeedBtn').textContent = state.isFeedRunning ? '● Live Feed: ON' : '○ Live Feed: OFF'; if (state.isFeedRunning) { feedInterval = setInterval(tick, 2500); } else { clearInterval(feedInterval); } };
       const gb = document.getElementById('genBtn');
-      gb.onclick = () => { voiceGen = (voiceGen === 'F') ? 'M' : 'F'; gb.textContent = voiceGen === 'F' ? '🙋‍♀ Lekha' : '🙋‍♂ Rishi'; speakBorgMessage(voiceGen === 'F' ? 'Main Lekha bol rahi hoon Bibek.' : 'Main Rishi bol raha hoon Bibek.'); };
+      gb.onclick = () => { voiceGen = (voiceGen === 'F') ? 'M' : 'F'; gb.textContent = voiceGen === 'F' ? '🙋‍♀ Lekha' : '🙋‍♂ Rishi'; speakBorgMessage(voiceGen === 'F' ? 'Main Lekha bol rahi hoon Malik.' : 'Main Rishi bol raha hoon Malik.'); };
     };
   </script>
 </body>
