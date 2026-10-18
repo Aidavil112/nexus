@@ -178,6 +178,23 @@
         <div id="multiMarketRadar" class="grid grid-cols-4 gap-1 text-[11px] mono text-center"></div>
       </div>
     </section>
+    <section class="bg-slate-900 border border-cyan-500/30 rounded-2xl p-4 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-cyan-300">🎯 Grid Bot (PAPER) — video-wali strategy</h2>
+        <span id="gridStat" class="text-[10px] mono text-slate-400">⚪ OFF</span>
+      </div>
+      <div class="flex items-center justify-between text-[11px] text-slate-400">
+        <span id="gridCenter">Center: —</span>
+        <span id="gridPnl" class="mono text-cyan-300 font-bold">Grid P&L: ₹0.00</span>
+      </div>
+      <div class="grid grid-cols-4 gap-1.5 text-center mono text-[10px]" id="gridBody"></div>
+      <div class="grid grid-cols-3 gap-2">
+        <button id="gridStart" class="py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-[11px]">▶ START</button>
+        <button id="gridStop" class="py-2 rounded-xl bg-slate-800 text-slate-200 font-bold text-[11px]">⏸ PAUSE</button>
+        <button id="gridReset" class="py-2 rounded-xl bg-rose-500/20 text-rose-300 font-bold text-[11px]">↺ RESET</button>
+      </div>
+      <p class="text-[10px] text-slate-500">Rules (Delta-video jaisa): buy-below / sell-above center · exit 1-level upar · daily-loss ₹500 = auto-pause · 100% paper</p>
+    </section>
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2.5">
       <div class="flex items-center justify-between">
         <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300">Trades Log</h2>
@@ -349,7 +366,61 @@
       document.getElementById('orderEstimateDisplay').textContent = (est / a.price).toFixed(5) + ' ' + state.activeSymbol + ' (' + formatINR(est) + ')';
       drawLivePriceChart();
     }
-    async function tick() { await fetchLivePrices(); state.tickCount++; runBrain(); renderUI(); }
+    async function tick() { await fetchLivePrices(); state.tickCount++; runBrain(); if (window.nxGridTick) window.nxGridTick(); renderUI(); }
+    /* 🎯 GRID BOT (paper): center-price, 4-up/4-dn levels, exits, daily-loss pause */
+    (function () {
+      const GKEY = 'nexus_grid';
+      let G = { on: false, center: 0, gap: 0.5, amt: 2000, up: 4, dn: 4, levels: [], pnl: 0, trades: [], dayLoss: 0, day: '' };
+      try { const sv = JSON.parse(localStorage.getItem(GKEY) || 'null'); if (sv) G = Object.assign(G, sv); } catch (e) {}
+      function save() { try { localStorage.setItem(GKEY, JSON.stringify(G)); } catch (e) {} }
+      function today() { return new Date().toDateString(); }
+      function fmt(v) { return Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
+      function tnow() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+      function initLevels() {
+        G.center = marketCatalog.BTC.usdPrice; G.levels = [];
+        for (let i = 1; i <= G.dn; i++) G.levels.push({ side: 'BUY', px: +(G.center * (1 - G.gap * i / 100)).toFixed(2), st: 'fresh' });
+        for (let i = 1; i <= G.up; i++) G.levels.push({ side: 'SELL', px: +(G.center * (1 + G.gap * i / 100)).toFixed(2), st: 'fresh' });
+      }
+      window.nxGridTick = function () {
+        if (!G.on) return;
+        const px = marketCatalog.BTC.usdPrice, pxr = marketCatalog.BTC.price;
+        if (G.day !== today()) { G.day = today(); G.dayLoss = 0; }
+        for (const L of G.levels) {
+          if (L.st === 'fresh') {
+            const hit = (L.side === 'BUY' && px <= L.px) || (L.side === 'SELL' && px >= L.px);
+            if (hit) {
+              L.st = 'exit'; L.qty = G.amt / pxr; L.entry = px;
+              L.exitPx = L.side === 'BUY' ? +(L.px * (1 + G.gap / 100)).toFixed(2) : +(L.px * (1 - G.gap / 100)).toFixed(2);
+              G.trades.unshift({ t: tnow(), txt: L.side + ' fill $' + fmt(L.entry) + ' \u2192 exit $' + fmt(L.exitPx) }); G.trades = G.trades.slice(0, 10);
+            }
+          } else if (L.st === 'exit') {
+            const hit = (L.side === 'BUY' && px >= L.exitPx) || (L.side === 'SELL' && px <= L.exitPx);
+            if (hit) {
+              const pnl = (L.side === 'BUY' ? (L.exitPx - L.entry) : (L.entry - L.exitPx)) * L.qty;
+              G.pnl += pnl; if (pnl < 0) G.dayLoss += Math.abs(pnl);
+              L.st = 'fresh';
+              G.trades.unshift({ t: tnow(), txt: '\u2705 exit ' + (pnl >= 0 ? '+' : '') + '\u20b9' + pnl.toFixed(2) + ' (total \u20b9' + G.pnl.toFixed(2) + ')' }); G.trades = G.trades.slice(0, 10);
+            }
+          }
+        }
+        if (G.dayLoss >= 500) { G.on = false; G.trades.unshift({ t: tnow(), txt: '\ud83d\uded1 daily-loss \u20b9500 hit \u2014 grid PAUSE (risk-rule)' }); }
+        renderG(); save();
+      };
+      function renderG() {
+        const el = document.getElementById('gridBody'); if (!el) return;
+        document.getElementById('gridStat').textContent = G.on ? '\ud83d\udfe2 RUNNING' : '\u26aa OFF';
+        document.getElementById('gridPnl').textContent = 'Grid P&L: \u20b9' + G.pnl.toFixed(2);
+        document.getElementById('gridCenter').textContent = G.center ? 'Center $' + fmt(G.center) + ' \u00b7 gap ' + G.gap + '% \u00b7 \u20b9' + G.amt + '/lvl' : 'Center: \u2014';
+        el.innerHTML = G.levels.map(function (L) {
+          return '<div class="rounded-lg border ' + (L.st === 'exit' ? 'border-cyan-600/60 bg-cyan-500/10' : 'border-slate-800 bg-slate-900') + ' p-1.5"><div class="font-bold ' + (L.side === 'BUY' ? 'text-emerald-400' : 'text-rose-400') + '">' + L.side + ' $' + fmt(L.px) + '</div><div class="text-[10px] text-slate-400">' + (L.st === 'exit' ? '\u2192 exit $' + fmt(L.exitPx) : 'fresh') + '</div></div>';
+        }).join('') + G.trades.map(function (t) { return '<div class="col-span-4 text-left text-[10px] text-slate-400">' + t.t + ' \u2014 ' + t.txt + '</div>'; }).join('');
+      }
+      document.getElementById('gridStart').onclick = function () { if (!G.on) { if (!G.levels.length || confirm('NAYA grid? Center = abhi-ka BTC price')) { initLevels(); } G.on = true; G.day = today(); G.dayLoss = 0; renderG(); save(); } };
+      document.getElementById('gridStop').onclick = function () { G.on = false; renderG(); save(); };
+      document.getElementById('gridReset').onclick = function () { if (confirm('Grid reset?')) { G = { on: false, center: 0, gap: 0.5, amt: 2000, up: 4, dn: 4, levels: [], pnl: 0, trades: [], dayLoss: 0, day: '' }; save(); renderG(); } };
+      renderG();
+    })();
+
     window.onload = () => {
       initSpeechEngine(); renderUI(); feedInterval = setInterval(tick, 2500);
       document.getElementById('buyBtn').onclick = executeBuy;
