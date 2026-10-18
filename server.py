@@ -703,6 +703,7 @@ def _worker_footage(vid: str, raw: Path, voice: str, texts: list):
         v.update(status='error', error=str(e)[:280])
 
 
+# AUTO-DEPLOY-MARKER v2 (full-auto yug: signals+persona+memory-fix ek saath)
 # ---------- TUTOR-BRAIN: meri soch, NEXUS ke andar ----------
 BRAIN_MD = ''
 _bp = Path(__file__).parent / 'BRAIN.md'
