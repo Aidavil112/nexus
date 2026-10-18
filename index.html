@@ -319,7 +319,7 @@
 <body>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">NEXUS Command Deck — free personal AI assistant dashboard with 21 agents and paper trading</h1>
 <nav id="topbar">
-  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v3.1</span>
+  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v3.2</span>
   <button class="tb on" data-v="home">🏠 HOME</button>
   <button class="tb" data-v="trade">📈 TRADE</button>
   <button class="tb" data-v="gmail">📬 GMAIL</button>
@@ -339,6 +339,7 @@
         <button class="btn" id="tbLearn">🧠 SEEKHO</button>
       </div>
       <div id="tbOut" class="hint" style="white-space:pre-wrap;max-height:300px;overflow:auto">⚡ SCAN dabao — live EMA/RSI/ATR signals + bots ke paper-trades + P/L!</div>
+        <a href="paper.html" target="_blank" style="display:block;text-align:center;margin:8px 0;padding:8px;border-radius:10px;background:#0a2a35;border:1px solid #17869e;color:#8fe8ff;font-weight:700;font-size:11.5px;letter-spacing:1px;text-decoration:none">💰 PAPER-WALLET — ₹50,000 se khelo (asli prices, nakli paisa)</a>
         <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 2px 4px">
           <span style="font-size:10px;letter-spacing:2px;color:#ffd94d">📡 AUTO-SIGNALS</span>
           <button class="btn" id="sigTest" style="font-size:10px;padding:3px 10px">🔊 BOLKE DEKHO</button>
@@ -3101,6 +3102,7 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
     { id: 'brain',   e: '🧠', n: 'BRAIN / AUTOPILOT',  tab: 'brain',   st: 'LIVE' },
     { id: 'trade',   e: '📈', n: 'TRADE-BRAIN (6 bots)', tab: 'trade',  st: 'LIVE' },
     { id: 'autosig', e: '📡', n: 'AUTO-SIGNALS (5-min)', tab: 'trade',  st: 'LIVE' },
+    { id: 'paper',   e: '💰', n: 'PAPER-WALLET (₹50k practice)', tab: '_paper', st: 'LIVE' },
     { id: 'voice',   e: '🎙', n: 'LIVE VOICE + awaz',  tab: null,      st: 'LIVE' },
     { id: 'nmode',   e: '🤖', n: 'NEXUS MODE (wake)',  tab: null,      st: 'LIVE' },
     { id: 'video',   e: '🎬', n: 'VIDEO/FOOTAGE agent', tab: 'video',  st: 'DEP' },
@@ -3118,6 +3120,7 @@ if ('speechSynthesis' in window) log('🔊 voice engine online — assistant can
   const $ = function (id) { return document.getElementById(id); };
   function jump(tab) {
     if (!tab) return;
+    if (tab === '_paper') { window.open('paper.html', '_blank'); return; }
     const t = document.querySelector('.tb[data-v="' + tab + '"]');
     if (t) t.click();
     $('skPanel').style.display = 'none';
