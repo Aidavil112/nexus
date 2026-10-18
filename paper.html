@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NEXUS PAPER — Mobile Crypto Trading Bot & AI Assistant</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    @keyframes pulse-border { 0%, 100% { border-color: rgba(6, 182, 212, 0.35); } 50% { border-color: rgba(6, 182, 212, 0.95); } }
+    .nexus-glow { animation: pulse-border 2.5s infinite; }
+    @keyframes orb-pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 16px rgba(6, 182, 212, 0.45); } 50% { transform: scale(1.06); box-shadow: 0 0 28px rgba(6, 182, 212, 0.85); } }
+    .orb-anim { animation: orb-pulse 2s infinite ease-in-out; }
+    .orb-listening { animation: orb-pulse 0.8s infinite ease-in-out; box-shadow: 0 0 36px rgba(16, 185, 129, 0.95) !important; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-3 sm:p-5 pb-24">
+  <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+    <header class="bg-slate-900 border border-cyan-500/40 nexus-glow rounded-2xl p-4 shadow-xl">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/25 to-emerald-500/25 border border-cyan-400/60 flex items-center justify-center text-cyan-300 font-extrabold text-lg mono">NX</div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-white">NEXUS PAPER</h1>
+              <span id="feedSourceBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 mono font-semibold">● PHONE READY</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Paper-Wallet ₹50,000 · Asli prices · PAKKA nakli paisa 😄</p>
+          </div>
+        </div>
+        <button id="toggleAutoBotBtn" type="button" class="px-3 py-2 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition shadow-md shadow-emerald-500/20">
+          🤖 Auto-Pilot: ON
+        </button>
+      </div>
+      <div class="grid grid-cols-4 gap-1.5 mt-3 pt-3 border-t border-slate-800 text-center">
+        <button id="toggleVoiceBtn" type="button" class="py-1.5 px-1 rounded-lg text-[11px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">🔊 Voice: ON</button>
+        <button id="toggleFeedBtn" type="button" class="py-1.5 px-1 rounded-lg text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">● Live Feed: ON</button>
+        <button id="stepPriceBtn" type="button" class="py-1.5 px-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-200 border border-slate-700">Next Tick ↻</button>
+        <button id="resetBtn" type="button" class="py-1.5 px-1 rounded-lg text-[11px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30">Reset</button>
+      </div>
+    </header>
+    <div id="statusToast" class="hidden rounded-xl px-3.5 py-2.5 text-xs font-semibold border transition-all"></div>
+    <section class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4">
+        <span class="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 block font-semibold">Wallet Cash</span>
+        <span id="cashDisplay" class="text-lg sm:text-2xl font-bold text-white mono mt-0.5 block">₹50,000.00</span>
+        <span class="text-[10px] text-slate-500 mt-0.5 block">Ready to trade</span>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4">
+        <span class="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 block font-semibold">Holding Value</span>
+        <span id="positionValueDisplay" class="text-lg sm:text-2xl font-bold text-white mono mt-0.5 block">₹0.00</span>
+        <span id="holdingsSubtitle" class="text-[10px] text-slate-400 mt-0.5 block mono truncate">0.0000 units held</span>
+      </div>
+      <div class="col-span-2 sm:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-row sm:flex-col justify-between sm:justify-start items-center sm:items-start">
+        <div>
+          <span class="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400 block font-semibold">Total Equity &amp; Net P&amp;L</span>
+          <span id="totalEquityDisplay" class="text-lg sm:text-2xl font-bold text-emerald-400 mono mt-0.5 block">₹50,000.00</span>
+        </div>
+        <span id="pnlDisplay" class="text-xs font-bold text-emerald-400 mono sm:mt-0.5">Net P&amp;L: ₹0.00 (0.00%)</span>
+      </div>
+    </section>
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+        <div>
+          <label for="symbolSelect" class="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Active Crypto</label>
+          <select id="symbolSelect" class="w-full sm:w-auto bg-slate-950 border border-slate-700 text-white text-xs sm:text-sm rounded-xl px-3 py-2 font-bold focus:outline-none">
+            <option value="BTC">BTC / USDT</option>
+            <option value="ETH">ETH / USDT</option>
+            <option value="SOL">SOL / USDT</option>
+            <option value="BNB">BNB / USDT</option>
+          </select>
+        </div>
+        <div class="flex items-baseline justify-between sm:justify-end gap-2 pt-1 sm:pt-0 border-t sm:border-0 border-slate-800">
+          <span id="usdPriceSub" class="text-xs uppercase tracking-wider text-amber-300 mono">Live USD: —</span>
+          <div class="flex items-baseline gap-1.5">
+            <span id="currentPriceDisplay" class="text-xl sm:text-2xl font-black text-white mono">—</span>
+            <span id="priceChangeBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 mono">+0.00%</span>
+          </div>
+        </div>
+      </div>
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 space-y-1.5">
+        <div class="flex items-center justify-between text-[11px]">
+          <span id="borgSignalText" class="mono text-emerald-400 font-bold">NEXUS SCAN: NEUTRAL</span>
+          <div class="flex items-center gap-2 mono text-[10px]">
+            <span class="text-emerald-400 font-bold">━ Price</span>
+            <span class="text-cyan-400 font-bold">┄ EMA</span>
+          </div>
+        </div>
+        <div class="relative h-28 sm:h-36 w-full">
+          <canvas id="livePriceChart" class="w-full h-full block"></canvas>
+        </div>
+      </div>
+      <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-2.5">
+        <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1.5">
+          <span>Recent Ticks (USD)</span>
+          <span id="tickCountDisplay" class="mono">Ticks: 1</span>
+        </div>
+        <div id="priceTape" class="grid grid-cols-4 sm:grid-cols-8 gap-1 text-center mono text-[10px]"></div>
+      </div>
+      <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+        <span>Capital Base: <strong id="startingCapitalText" class="text-slate-200 mono">₹50,000</strong></span>
+        <span id="autoTradeCounter" class="mono text-cyan-300 font-bold">Auto-Trades: 0</span>
+      </div>
+    </section>
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200">Order Execution (PAPER)</h2>
+        <span id="orderEstimateDisplay" class="text-xs font-bold text-amber-300 mono">—</span>
+      </div>
+      <div class="space-y-2">
+        <label for="orderQtyInput" class="block text-[11px] text-slate-400">Order Amount (₹ INR)</label>
+        <div class="flex items-center gap-2">
+          <button id="qtyMinusBtn" type="button" class="w-11 h-11 rounded-xl bg-slate-800 text-white font-extrabold text-lg">-</button>
+          <input id="orderQtyInput" type="number" min="500" max="1000000" step="500" value="10000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-center text-white font-bold mono text-sm" />
+          <button id="qtyPlusBtn" type="button" class="w-11 h-11 rounded-xl bg-slate-800 text-white font-extrabold text-lg">+</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button id="buyBtn" type="button" class="py-3 px-4 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs sm:text-sm shadow-lg active:scale-95">BUY (LONG)</button>
+        <button id="sellBtn" type="button" class="py-3 px-4 rounded-xl bg-rose-500 text-white font-black text-xs sm:text-sm shadow-lg active:scale-95">SELL (CLOSE)</button>
+      </div>
+    </section>
+    <section class="bg-gradient-to-b from-slate-900 to-slate-950 border border-cyan-500/40 rounded-2xl p-4 sm:p-5 space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+          <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-cyan-300">NEXUS Mind &amp; Voice</h2>
+        </div>
+        <span id="borgActionBadge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 mono">NEXUS ONLINE</span>
+      </div>
+      <div class="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-xl p-3">
+        <div id="nexusVoiceOrb" class="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-500 to-emerald-400 orb-anim flex items-center justify-center cursor-pointer shadow-md">
+          <span id="orbIcon" class="text-xl">🎙️</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <button id="micBtn" type="button" class="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-extrabold text-xs shadow active:scale-95">
+            🎤 Click To Speak with NEXUS
+          </button>
+          <p id="voiceStatusText" class="text-[10px] text-slate-400 mt-1 truncate">Hindi ya English mein bolkar order dein!</p>
+        </div>
+      </div>
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1.5">
+        <p id="borgSpeechText" class="text-xs sm:text-sm font-medium text-slate-100 leading-relaxed">
+          "Main BTC, ETH, SOL, BNB ko 24/7 scan kar raha hoon. Dip aate hi paper-buy karunga!"
+        </p>
+        <p id="borgNextPlanText" class="text-[11px] text-slate-400 border-t border-slate-800/80 pt-1.5">
+          Rule: Auto-Buy (25% capital) on Dip (RSI≤38) | Book: +1.0% | Paper-only, asli paisa NAHI
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <div class="flex items-center gap-1.5 text-xs">
+          <label for="strategySelect" class="text-slate-400 text-[11px]">Strategy:</label>
+          <select id="strategySelect" class="bg-slate-950 border border-slate-700 text-[11px] text-white rounded-lg px-2 py-1 font-semibold">
+            <option value="HYBRID">Smart Scalper</option>
+            <option value="DIP">Dip Buyer</option>
+            <option value="MOMENTUM">Momentum</option>
+          </select>
+        </div>
+        <button id="askBorgNowBtn" type="button" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">⚡ Speak Advice Now</button>
+      </div>
+    </section>
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2.5">
+      <div class="flex items-center justify-between text-xs">
+        <span class="uppercase tracking-wider text-slate-400 font-semibold">Technical Scan</span>
+        <span id="activeAnalysisSymbol" class="font-bold text-cyan-300 mono">BTC</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2"><span class="text-slate-400 block text-[10px]">RSI (14-Tick)</span><span id="rsiDisplay" class="font-bold text-white mono">50.0</span></div>
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2"><span class="text-slate-400 block text-[10px]">EMA Trend</span><span id="smaDisplay" class="font-bold text-white mono">Flat</span></div>
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2"><span class="text-slate-400 block text-[10px]">Position P&amp;L %</span><span id="posPnlPctDisplay" class="font-bold text-slate-300 mono">0.00%</span></div>
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2"><span class="text-slate-400 block text-[10px]">AI Confidence</span><span id="confidenceDisplay" class="font-bold text-emerald-400 mono">80%</span></div>
+      </div>
+      <div class="pt-1">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400 block mb-1">24/7 Multi-Coin Radar</span>
+        <div id="multiMarketRadar" class="grid grid-cols-4 gap-1 text-[11px] mono text-center"></div>
+      </div>
+    </section>
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300">Trades Log</h2>
+        <span id="tradeCountBadge" class="text-xs text-slate-400 mono">0 trades</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-[11px]">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase">
+              <th class="py-1.5 px-2">Time</th><th class="py-1.5 px-2">Mode</th><th class="py-1.5 px-2">Coin</th>
+              <th class="py-1.5 px-2 text-right">Qty</th><th class="py-1.5 px-2 text-right">Price</th><th class="py-1.5 px-2">Reason</th>
+            </tr>
+          </thead>
+          <tbody id="tradeLogBody" class="divide-y divide-slate-800/60 mono">
+            <tr><td colspan="6" class="py-4 text-center text-slate-500 font-sans">Auto-trades yahan aayenge.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <script>
+    const USD_TO_INR = 88.5;
+    let initialCapital = 50000;
+    const marketCatalog = {
+      BTC: { name: 'Bitcoin', usdPrice: 81639, price: 0, history: [], positions: 0, avgCost: 0, rsi: 50, signal: 'HOLD', confidence: 80, isCrypto: true },
+      ETH: { name: 'Ethereum', usdPrice: 2408, price: 0, history: [], positions: 0, avgCost: 0, rsi: 50, signal: 'HOLD', confidence: 76, isCrypto: true },
+      SOL: { name: 'Solana', usdPrice: 103, price: 0, history: [], positions: 0, avgCost: 0, rsi: 50, signal: 'HOLD', confidence: 72, isCrypto: true },
+      BNB: { name: 'BNB', usdPrice: 592, price: 0, history: [], positions: 0, avgCost: 0, rsi: 50, signal: 'HOLD', confidence: 70, isCrypto: true }
+    };
+    const KEYS = ['BTC','ETH','SOL','BNB'];
+    KEYS.forEach(k => { const a = marketCatalog[k]; a.price = +(a.usdPrice * USD_TO_INR).toFixed(2); a.history = [a.usdPrice]; });
+    let state = { cash: initialCapital, activeSymbol: 'BTC', isFeedRunning: true, isAutoPilot: true, isVoiceOn: true,
+      strategy: 'HYBRID', tickCount: 1, autoTradeCount: 0,
+      lastSpeechText: 'Namaste Malik! Main NEXUS paper-bot hoon. ₹50,000 ke nakli paise se practice karte hain!',
+      trades: [] };
+    try { const sv = JSON.parse(localStorage.getItem('nexus_paper') || 'null'); if (sv && typeof sv.cash === 'number') { state = Object.assign(state, sv); KEYS.forEach(k => { if (!marketCatalog[k].history || !marketCatalog[k].history.length) marketCatalog[k].history = [marketCatalog[k].usdPrice]; if (sv.h && sv.h[k]) { marketCatalog[k].positions = sv.h[k].p; marketCatalog[k].avgCost = sv.h[k].c; } }); } } catch(e) {}
+    function saveState() { try { const h = {}; KEYS.forEach(k => h[k] = { p: marketCatalog[k].positions, c: marketCatalog[k].avgCost }); localStorage.setItem('nexus_paper', JSON.stringify({ cash: state.cash, autoTradeCount: state.autoTradeCount, trades: state.trades.slice(0, 30), h })); } catch(e) {} }
+    let feedInterval = null, recognition = null, isListening = false;
+    function formatINR(v) { return '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function formatUSD(v) { return '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function showToast(msg, type) { const t = document.getElementById('statusToast'); t.textContent = msg; t.className = 'rounded-xl px-3.5 py-2.5 text-xs font-semibold border transition-all ' + (type === 'error' ? 'bg-rose-500/15 border-rose-500/40 text-rose-300' : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'); }
+    function speakBorgMessage(text) {
+      if (!state.isVoiceOn || !('speechSynthesis' in window)) return;
+      try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'hi-IN'; u.rate = 0.95; window.speechSynthesis.speak(u); } catch(e) {}
+    }
+    function initSpeechEngine() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return;
+      recognition = new SR(); recognition.lang = 'hi-IN';
+      recognition.onstart = () => { isListening = true; document.getElementById('nexusVoiceOrb').classList.add('orb-listening'); };
+      recognition.onresult = (e) => { handleVoiceCommand(e.results[0][0].transcript); };
+      recognition.onend = () => { isListening = false; document.getElementById('nexusVoiceOrb').classList.remove('orb-listening'); };
+    }
+    function handleVoiceCommand(input) {
+      const t = input.toLowerCase();
+      let reply = 'NEXUS paper-bot active hai! BTC ' + formatUSD(marketCatalog.BTC.usdPrice) + ' chal raha hai.';
+      if (t.includes('btc')) reply = 'Bitcoin abhi ' + formatUSD(marketCatalog.BTC.usdPrice) + ' (' + formatINR(marketCatalog.BTC.price) + ') par hai.';
+      else if (t.includes('eth')) reply = 'Ethereum abhi ' + formatUSD(marketCatalog.ETH.usdPrice) + ' par hai.';
+      else if (t.includes('sol')) reply = 'Solana ' + formatUSD(marketCatalog.SOL.usdPrice) + ' par hai.';
+      else if (t.includes('buy') || t.includes('kharid') || t.includes('खरीद')) { executeBuy(); reply = 'Paper-buy execute kar diya Malik!'; }
+      else if (t.includes('sell') || t.includes('bech') || t.includes('बेच')) { executeSell(); reply = 'Paper-sell kar diya!'; }
+      document.getElementById('borgSpeechText').textContent = '"' + reply + '"';
+      speakBorgMessage(reply);
+    }
+    function drawLivePriceChart() {
+      const canvas = document.getElementById('livePriceChart');
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = Math.max(240, Math.floor(rect.width)); canvas.height = Math.max(100, Math.floor(rect.height));
+      const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const hist = marketCatalog[state.activeSymbol].history;
+      if (hist.length < 2) return;
+      const padX = 10, padY = 12, w = canvas.width - padX * 2, h = canvas.height - padY * 2;
+      const minVal = Math.min(...hist), maxVal = Math.max(...hist), range = maxVal - minVal || 1;
+      ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2.5; ctx.beginPath();
+      hist.forEach((val, idx) => { const x = padX + (idx / (hist.length - 1)) * w, y = padY + h - ((val - minVal) / range) * h; if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+      ctx.stroke();
+    }
+    async function fetchLivePrices() {
+      try {
+        const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbols=%5B%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22BNBUSDT%22%5D');
+        if (res.ok) {
+          const data = await res.json();
+          data.forEach(item => { const sym = item.symbol.replace('USDT',''); if (marketCatalog[sym]) { const u = parseFloat(item.price); marketCatalog[sym].usdPrice = u; marketCatalog[sym].price = +(u * USD_TO_INR).toFixed(2); marketCatalog[sym].history.push(u); if (marketCatalog[sym].history.length > 24) marketCatalog[sym].history.shift(); } });
+          document.getElementById('feedSourceBadge').textContent = '● BINANCE LIVE';
+          return;
+        }
+      } catch(e) {}
+      KEYS.forEach(sym => { const a = marketCatalog[sym]; const move = (Math.random() - 0.495) * 0.008; a.usdPrice = +(a.usdPrice * (1 + move)).toFixed(2); a.price = +(a.usdPrice * USD_TO_INR).toFixed(2); a.history.push(a.usdPrice); if (a.history.length > 24) a.history.shift(); });
+      document.getElementById('feedSourceBadge').textContent = '● SIM MODE';
+    }
+    function runBrain() {
+      KEYS.forEach(sym => { const a = marketCatalog[sym]; const h = a.history; if (h.length < 3) return; let gains = 0, losses = 0; for (let i = 1; i < h.length; i++) { const d = h[i] - h[i-1]; if (d >= 0) gains += d; else losses += Math.abs(d); } a.rsi = losses === 0 ? 80 : Math.round(100 - (100 / (1 + (gains / losses)))); const pnl = a.positions > 0 ? ((a.price - a.avgCost) / a.avgCost) * 100 : 0; a.signal = pnl >= 1.0 ? 'BOOK PROFIT' : (a.rsi <= 38 ? 'STRONG BUY' : 'HOLD'); });
+      if (!state.isAutoPilot) return;
+      for (const sym of KEYS) {
+        const a = marketCatalog[sym];
+        if (a.positions > 0 && ((a.price - a.avgCost) / a.avgCost) * 100 >= 1.0) {
+          const qty = a.positions, amt = +(qty * a.price).toFixed(2);
+          a.positions = 0; a.avgCost = 0; state.cash += amt; state.autoTradeCount++;
+          recordTrade('AUTO-SELL', sym, qty, a.price, amt, 'Target Hit (+1.0%)');
+          showToast(sym + ' paper-profit book!', 'success'); speakBorgMessage(sym + ' mein profit book ho gaya Malik.'); saveState(); return;
+        }
+      }
+      for (const sym of KEYS) {
+        const a = marketCatalog[sym];
+        const budget = state.cash * 0.25;
+        if (a.rsi <= 38 && budget >= 500 && state.cash >= budget) {
+          const qty = +(budget / a.price).toFixed(5);
+          a.positions += qty; a.avgCost = a.price; state.cash -= budget; state.autoTradeCount++;
+          recordTrade('AUTO-BUY', sym, qty, a.price, budget, 'Oversold Dip (RSI ' + a.rsi + ')');
+          showToast('Auto-Bought ' + sym + ' on Dip!', 'success'); speakBorgMessage(sym + ' dip par paper-buy kar liya.'); saveState(); return;
+        }
+      }
+    }
+    function executeBuy() {
+      const a = marketCatalog[state.activeSymbol];
+      const amt = Math.max(500, parseFloat(document.getElementById('orderQtyInput').value) || 5000);
+      if (amt > state.cash) return showToast('Wallet me itna paper-cash nahi!', 'error');
+      const qty = +(amt / a.price).toFixed(5);
+      a.positions += qty; a.avgCost = a.price; state.cash -= amt;
+      recordTrade('MANUAL-BUY', state.activeSymbol, qty, a.price, amt, 'Manual'); saveState(); renderUI();
+    }
+    function executeSell() {
+      const a = marketCatalog[state.activeSymbol];
+      if (a.positions <= 0) return showToast('Koi position nahi hai!', 'error');
+      const qty = a.positions, amt = +(qty * a.price).toFixed(2);
+      a.positions = 0; a.avgCost = 0; state.cash += amt;
+      recordTrade('MANUAL-SELL', state.activeSymbol, qty, a.price, amt, 'Manual'); saveState(); renderUI();
+    }
+    function recordTrade(action, symbol, qty, price, total, reason) {
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      state.trades.unshift({ time: now, action, symbol, qty, price, total, reason });
+      state.trades = state.trades.slice(0, 30);
+    }
+    function renderUI() {
+      const a = marketCatalog[state.activeSymbol];
+      let posVal = 0; KEYS.forEach(k => posVal += marketCatalog[k].positions * marketCatalog[k].price);
+      const totalEquity = state.cash + posVal; const netPnl = totalEquity - initialCapital;
+      document.getElementById('cashDisplay').textContent = formatINR(state.cash);
+      document.getElementById('positionValueDisplay').textContent = formatINR(a.positions * a.price);
+      document.getElementById('holdingsSubtitle').textContent = a.positions.toFixed(4) + ' ' + state.activeSymbol + ' held';
+      document.getElementById('totalEquityDisplay').textContent = formatINR(totalEquity);
+      document.getElementById('pnlDisplay').textContent = 'Net P&L: ' + formatINR(netPnl) + ' (' + (netPnl / initialCapital * 100).toFixed(2) + '%)';
+      document.getElementById('usdPriceSub').textContent = 'Live USD: ' + formatUSD(a.usdPrice);
+      document.getElementById('currentPriceDisplay').textContent = formatINR(a.price);
+      document.getElementById('borgSignalText').textContent = 'NEXUS SCAN: ' + a.signal + ' (RSI ' + a.rsi + ')';
+      document.getElementById('rsiDisplay').textContent = a.rsi + ' (' + (a.rsi <= 38 ? 'Buy-zone' : a.rsi >= 68 ? 'Overbought' : 'Neutral') + ')';
+      document.getElementById('posPnlPctDisplay').textContent = a.positions > 0 ? (((a.price - a.avgCost) / a.avgCost) * 100).toFixed(2) + '%' : '0.00%';
+      document.getElementById('autoTradeCounter').textContent = 'Auto-Trades: ' + state.autoTradeCount;
+      document.getElementById('tickCountDisplay').textContent = 'Ticks: ' + state.tickCount;
+      const tape = document.getElementById('priceTape');
+      tape.innerHTML = a.history.slice(-8).map(v => '<div class="rounded bg-slate-900 border border-slate-800 py-0.5">' + formatUSD(v) + '</div>').join('');
+      document.getElementById('multiMarketRadar').innerHTML = KEYS.map(k => '<div class="rounded-lg p-1.5 border border-slate-800 bg-slate-900"><div class="font-bold">' + k + '</div><div class="text-[10px] text-slate-400">RSI ' + marketCatalog[k].rsi + '</div></div>').join('');
+      document.getElementById('tradeCountBadge').textContent = state.trades.length + ' trades';
+      document.getElementById('tradeLogBody').innerHTML = state.trades.length === 0 ? '<tr><td colspan="6" class="py-4 text-center text-slate-500 font-sans">Auto-trades yahan aayenge.</td></tr>' :
+        state.trades.map(t => '<tr class="hover:bg-slate-800/40"><td class="py-2 px-2 text-slate-400">' + t.time + '</td><td class="py-2 px-2"><span class="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">' + t.action + '</span></td><td class="py-2 px-2 text-white">' + t.symbol + '</td><td class="py-2 px-2 text-right">' + t.qty.toFixed(4) + '</td><td class="py-2 px-2 text-right">' + formatINR(t.price) + '</td><td class="py-2 px-2 text-slate-300">' + t.reason + '</td></tr>').join('');
+      const est = Math.max(500, parseFloat(document.getElementById('orderQtyInput').value) || 0);
+      document.getElementById('orderEstimateDisplay').textContent = (est / a.price).toFixed(5) + ' ' + state.activeSymbol + ' (' + formatINR(est) + ')';
+      drawLivePriceChart();
+    }
+    async function tick() { await fetchLivePrices(); state.tickCount++; runBrain(); renderUI(); }
+    window.onload = () => {
+      initSpeechEngine(); renderUI(); feedInterval = setInterval(tick, 2500);
+      document.getElementById('buyBtn').onclick = executeBuy;
+      document.getElementById('sellBtn').onclick = executeSell;
+      document.getElementById('stepPriceBtn').onclick = tick;
+      document.getElementById('qtyMinusBtn').onclick = () => { const i = document.getElementById('orderQtyInput'); i.value = Math.max(500, (+i.value || 500) - 500); renderUI(); };
+      document.getElementById('qtyPlusBtn').onclick = () => { const i = document.getElementById('orderQtyInput'); i.value = (+i.value || 0) + 500; renderUI(); };
+      document.getElementById('orderQtyInput').oninput = renderUI;
+      document.getElementById('resetBtn').onclick = () => { if (!confirm('Paper-wallet reset (₹50,000 fresh)?')) return; localStorage.removeItem('nexus_paper'); location.reload(); };
+      document.getElementById('symbolSelect').onchange = (e) => { state.activeSymbol = e.target.value; document.getElementById('activeAnalysisSymbol').textContent = e.target.value; renderUI(); };
+      document.getElementById('askBorgNowBtn').onclick = () => { const a = marketCatalog[state.activeSymbol]; speakBorgMessage(a.signal === 'STRONG BUY' ? state.activeSymbol + ' buy-zone mein hai Malik, RSI ' + a.rsi : state.activeSymbol + ' par abhi ' + a.signal + ', RSI ' + a.rsi); };
+      document.getElementById('micBtn').onclick = () => { if (recognition) recognition.start(); };
+      document.getElementById('nexusVoiceOrb').onclick = () => { if (recognition) recognition.start(); };
+      document.getElementById('toggleAutoBotBtn').onclick = () => { state.isAutoPilot = !state.isAutoPilot; document.getElementById('toggleAutoBotBtn').textContent = state.isAutoPilot ? '🤖 Auto-Pilot: ON' : '🤖 Auto-Pilot: OFF'; };
+      document.getElementById('toggleVoiceBtn').onclick = () => { state.isVoiceOn = !state.isVoiceOn; document.getElementById('toggleVoiceBtn').textContent = state.isVoiceOn ? '🔊 Voice: ON' : '🔇 Voice: OFF'; if (!state.isVoiceOn) { try { speechSynthesis.cancel(); } catch(e) {} } };
+      document.getElementById('toggleFeedBtn').onclick = () => { state.isFeedRunning = !state.isFeedRunning; document.getElementById('toggleFeedBtn').textContent = state.isFeedRunning ? '● Live Feed: ON' : '○ Live Feed: OFF'; if (state.isFeedRunning) { feedInterval = setInterval(tick, 2500); } else { clearInterval(feedInterval); } };
+    };
+  </script>
+</body>
+</html>
