@@ -319,7 +319,7 @@
 <body>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">NEXUS Command Deck — free personal AI assistant dashboard with 21 agents and paper trading</h1>
 <nav id="topbar">
-  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v3.2</span>
+  <span class="brand">NEXUS</span><span id="vtag" style="font-size:9px;color:#7fa;background:#0a2018;border:1px solid #1d4a35;border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:middle">v3.3</span>
   <button class="tb on" data-v="home">🏠 HOME</button>
   <button class="tb" data-v="trade">📈 TRADE</button>
   <button class="tb" data-v="gmail">📬 GMAIL</button>
@@ -481,6 +481,7 @@
     <button class="mini on" id="speakBtn" title="Assistant ki awaaz on/off">🔊</button>
     <select id="ttsVoice" title="Assistant ki voice chuno"></select>
     <button class="mini" id="langBtn" title="Speech input language">EN</button>
+    <button class="mini" id="genBtn" title="Awaz badlo: Lekha (F) / Rishi (M)">🙋‍♀</button>
   </div>
   <div id="msgs"></div>
   <form id="cform"><input id="cinput" placeholder="Type… ya 🎙 VOICE CHAT dabao" autocomplete="off"><button>SEND</button></form>
@@ -1544,6 +1545,26 @@ document.getElementById('speakBtn').addEventListener('click', function () {
   if (!Voice.speakOn && 'speechSynthesis' in window) speechSynthesis.cancel();
   log(Voice.speakOn ? '🔊 assistant voice enabled' : '🔇 assistant muted');
 });
+document.getElementById('genBtn').addEventListener('click', function () {
+  let g = 'F';
+  try { g = localStorage.getItem('nexus_gen') || 'F'; } catch (e) {}
+  g = (g === 'F') ? 'M' : 'F';
+  try { localStorage.setItem('nexus_gen', g); } catch (e) {}
+  this.textContent = (g === 'F') ? '🙋‍♀' : '🙋‍♂';
+  const MALE = /rishi|hemant|madhur|male/i;
+  const vs = Voice.voices || [];
+  let i = -1;
+  if (g === 'M') i = vs.findIndex(function (v) { return MALE.test(v.name || '') && /^hi/i.test(v.lang || ''); });
+  if (g === 'M' && i < 0) i = vs.findIndex(function (v) { return MALE.test(v.name || ''); });
+  if (g === 'F') i = vs.findIndex(function (v) { return /lekha|kajal|swara|nisha/i.test(v.name || '') && /^hi/i.test(v.lang || ''); });
+  if (i < 0) i = Voice.pickVoice('hi-IN');
+  const sel = document.getElementById('ttsVoice');
+  if (i >= 0 && sel) sel.value = String(i);
+  toast((g === 'F') ? 'AWAZ: LEKHA (female)' : 'AWAZ: RISHI (male)');
+  log('🎭 voice-gen -> ' + g);
+});
+(function () { let g = 'F'; try { g = localStorage.getItem('nexus_gen') || 'F'; } catch (e) {} const b = document.getElementById('genBtn'); if (b) b.textContent = (g === 'F') ? '🙋‍♀' : '🙋‍♂'; })();
+
 document.getElementById('langBtn').addEventListener('click', function () {
   Voice.sttLang = Voice.sttLang === 'en-IN' ? 'hi-IN' : 'en-IN';
   this.textContent = Voice.sttLang === 'en-IN' ? 'EN' : 'हिं';
