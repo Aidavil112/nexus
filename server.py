@@ -302,6 +302,21 @@ FFMPEG_BIN = imageio_ffmpeg.get_ffmpeg_exe()
 HF_TOKEN = ''.join(ch for ch in os.getenv('HF_TOKEN', '') if 32 <= ord(ch) < 127).strip()
 MEDIA_DIR = Path('/tmp/nexus_media'); MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 VIDS = {}
+
+def _vids_save():
+    try:
+        (MEDIA_DIR / 'vids.json').write_text(json.dumps(VIDS))
+    except Exception:
+        pass
+
+try:
+    _vp = MEDIA_DIR / 'vids.json'
+    if _vp.exists():
+        _vd = json.loads(_vp.read_text())
+        if isinstance(_vd, dict):
+            VIDS.update(_vd)
+except Exception:
+    pass
 _BUNDLED_FONT = Path(__file__).parent / 'fonts' / 'DejaVuSans-Bold.ttf'
 _IMG_MODELS = ('gemini-2.5-flash-image', 'gemini-3.1-flash-image-preview', 'gemini-3.1-flash-image', 'gemini-3-pro-image-preview', 'gemini-3-pro-image', 'gemini-3.1-flash-lite-image')
 
