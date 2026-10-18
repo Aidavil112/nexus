@@ -945,13 +945,13 @@ SIG_LOG = []
 try:
     _sigp = MEDIA_DIR / 'tradesignals.json'
     if _sigp.exists():
-        SIG_LOG = _j.loads(_sigp.read_text())[:30]
+        SIG_LOG = json.loads(_sigp.read_text())[:30]
 except Exception:
     SIG_LOG = []
 
 def _sig_save():
     try:
-        (MEDIA_DIR / 'tradesignals.json').write_text(_j.dumps(SIG_LOG[-30:]))
+        (MEDIA_DIR / 'tradesignals.json').write_text(json.dumps(SIG_LOG[-30:]))
     except Exception:
         pass
 for _i, (_sym, _nm) in enumerate(TB_PAIRS):
